@@ -1,0 +1,11 @@
+skill,versao,overall,correctness,discoverability,reliability,efficiency,tier1
+spec,esta,83.5,85,80,75,100,9/9
+implement,esta,86.0,85,90,75,100,9/9
+review,esta,86.0,85,90,75,100,9/9
+close-spec,esta,86.0,85,90,75,100,9/9
+spec,original (b13b798/0aefd16),83.5,85,80,75,100,
+implementar,original (0aefd16),84.75,85,85,75,100,
+revisar,original (0aefd16),86.0,85,90,75,100,
+fechar,original (0aefd16),86.0,85,90,75,100,
+review,upstream felipeam86,83.25,70,90,85,100,
+implement,upstream felipeam86,87.25,85,85,85,100,

@@ -1,0 +1,29 @@
+agent,case,arm,attempt,passed,total,seconds,cost_usd,failed
+Claude Opus 5.5 (Claude Code),close-divergente,with,1,4,4,25.6,0.2726134,
+Claude Opus 5.5 (Claude Code),close-divergente,with,2,4,4,31.9,0.2861776,
+Claude Opus 5.5 (Claude Code),close-divergente,without,1,4,4,21.3,0.227882,
+Claude Opus 5.5 (Claude Code),close-divergente,without,2,4,4,19.7,0.2270538,
+Claude Opus 5.5 (Claude Code),close-feliz,with,1,12,12,36.5,0.31428059999999997,
+Claude Opus 5.5 (Claude Code),close-feliz,with,2,12,12,41.6,0.3436196,
+Claude Opus 5.5 (Claude Code),close-feliz,without,1,6,12,39.8,0.2901688,secao_como_testado;secao_risco;secao_como_reverter;linhas_validated;pendencia_sem_duplicar;branch_removida
+Claude Opus 5.5 (Claude Code),close-feliz,without,2,7,12,43.9,0.33438539999999994,secao_como_testado;secao_risco;secao_como_reverter;linhas_validated;pendencia_sem_duplicar
+Claude Opus 5.5 (Claude Code),implement-liquida,with,1,6,6,111.0,0.7926603999999998,
+Claude Opus 5.5 (Claude Code),implement-liquida,with,2,6,6,87.6,0.6953236,
+Claude Opus 5.5 (Claude Code),implement-liquida,without,1,4,6,31.7,0.26127259999999997,linhas_validated;revisao_rodou
+Claude Opus 5.5 (Claude Code),implement-liquida,without,2,4,6,30.5,0.27652540000000003,linhas_validated;revisao_rodou
+Claude Opus 5.5 (Claude Code),spec-arredondamento,with,1,8,8,171.3,0.890769,
+Claude Opus 5.5 (Claude Code),spec-arredondamento,with,2,8,8,160.2,0.8195396000000001,
+Claude Opus 5.5 (Claude Code),spec-arredondamento,without,1,4,8,76.8,0.39106320000000006,risco_alto;amostra_versionada;teste_diferencial;origem_do_esperado
+Claude Opus 5.5 (Claude Code),spec-arredondamento,without,2,4,8,60.5,0.36305699999999996,risco_alto;amostra_versionada;teste_diferencial;origem_do_esperado
+Gemini 4 Neon (Antigravity),close-divergente,with,1,4,4,223.1,,
+Gemini 4 Neon (Antigravity),close-divergente,with,2,4,4,212.9,,
+Gemini 4 Neon (Antigravity),close-divergente,without,1,4,4,76.7,,
+Gemini 4 Neon (Antigravity),close-divergente,without,2,4,4,68.9,,
+Gemini 4 Neon (Antigravity),close-feliz,with,1,12,12,145.2,,
+Gemini 4 Neon (Antigravity),close-feliz,with,2,12,12,139.8,,
+Gemini 4 Neon (Antigravity),close-feliz,without,1,9,12,95.2,,secao_como_testado;secao_risco;secao_como_reverter
+Gemini 4 Neon (Antigravity),close-feliz,without,2,10,12,109.1,,secao_como_testado;secao_como_reverter
+Gemini 4 Neon (Antigravity),implement-liquida,with,1,6,6,259.4,,
+Gemini 4 Neon (Antigravity),implement-liquida,without,1,4,6,118.6,,linhas_validated;revisao_rodou
+Gemini 4 Neon (Antigravity),spec-arredondamento,with,1,8,8,333.7,,
+Gemini 4 Neon (Antigravity),spec-arredondamento,without,1,4,8,124.2,,risco_alto;amostra_versionada;teste_diferencial;origem_do_esperado

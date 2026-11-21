@@ -1,230 +1,95 @@
-# pipe-skills
+# skills
 
-A Claude Code plugin that runs a spec-to-ship pipeline on Linear or on GitHub Issues. An issue is the specification. Claude implements it in validated, committed steps, has a fresh reviewer check the work until no finding is worth another round, and stops at the merge gate. When you are ready, Claude squash-merges the work and closes the issue. It can also work through a whole `Todo` queue on its own, one issue after another.
+Aqui ficam as skills que uso no trabalho com o Devin CLI. As que estão aqui hoje são para mudanças em pipelines de dados. Uso `/spec` para escrever o plano e `/implement` para tocar a mudança numa worktree. A revisão roda com um modelo de outro fornecedor e registra os commits que conferiu.
 
-The plugin also has the working-style skills that the pipeline relies on: give an opinion without changing anything, interview you for a spec, keep documents at their final state, turn corrections into lasting rules, and prepare work that Claude does alone while you are away.
+[Instalação](#instalação) · [Fluxo](#fluxo) · [Benchmarks](#benchmarks) · [Método e decisões](docs/decisoes.md)
 
-## Install
-
-```
-/plugin marketplace add felipeam86/pipe-skills
-/plugin install pipe-skills@pipe-skills
-```
-
-## Setup
-
-Run `/pipe-skills:setup` in the project. It asks for Linear or GitHub Issues, checks what the tracker needs, fixes what it can after your go, and writes the line of the project `CLAUDE.md` that names where the work lives. On Linear, that line names one project, or one initiative whose projects are the outcomes of the work. Both trackers use the `gh` CLI when the repository has a GitHub remote.
-
-## Session names
-
-When you type `implement`, `assess`, `review`, `ship`, or `prd` with an issue, a hook of the plugin names the session `/<skill> <ISSUE-N> - <Issue title>`, for example `/assess GH-12 - Add the away skill to prepare work that Claude does alone while the user is away`. The hook needs `python3`. For a Linear issue, it reads the title with the key in the `LINEAR_API_KEY` environment variable, and without a key the name is `/<skill> <ISSUE-N>`. A skill that Claude starts by itself, such as each issue of `autonomous-loop`, does not rename the session, because Claude Code fires the hook only on a prompt that you type.
-
-## Skills
-
-The pipeline:
-
-| Skill | What it does | Example |
-|---|---|---|
-| `setup` | Makes a project ready: the tracker line in `CLAUDE.md`, and the team with its project or initiative, or the GitHub project, with its states and priority. | `/pipe-skills:setup` |
-| `prd` | Files an issue that is the specification of its own implementation in the outcome it serves, or a new outcome, or updates one after the plan changes. | `/pipe-skills:prd file an issue for the CSV export we just discussed` |
-| `assess` | Judges whether one `Backlog` or `Todo` issue still matches the code and its goal, and gives a verdict with the evidence. It changes nothing: after your go, the session applies the verdict and posts the review comment. | `/pipe-skills:assess #42` |
-| `implement` | Implements one issue in a worktree, commits each validated step, reviews with fresh reviewers until no finding is worth another round, and stops at the merge gate. | `/pipe-skills:implement ACM-42` or `/pipe-skills:implement #42` |
-| `review` | Reviews a pull request or a branch, and gives a merge verdict first. | `/pipe-skills:review 118` |
-| `ship` | Rebases, squash-merges, closes the issue, files only the follow-ups that earn an issue, and cleans up the branch and the worktree. | `/pipe-skills:ship ACM-42` |
-| `sweep` | Runs `assess` on every `Backlog` and `Todo` issue, or on the issues you name, reports the verdicts, and applies only the ones you approve: a review comment, a rewrite, a close, or a cancel. | `/pipe-skills:sweep` or `/pipe-skills:sweep #42` |
-| `autonomous-loop` | Implements and ships the issues you name, or every issue of one project in `Todo` state, with no stop for you, from the highest priority, one fresh subagent per issue. It skips an issue that `assess` finds not current, and changes nothing on it. | `/pipe-skills:autonomous-loop` |
-
-Working style:
-
-| Skill | What it does | Example |
-|---|---|---|
-| `advise` | Gives an opinion or a plan, and changes no file. | `/pipe-skills:advise is this cache layer worth it?` |
-| `interview` | Interviews you in depth to write a specification. | `/pipe-skills:interview the onboarding redesign` |
-| `final-state` | Edits a document, an issue, or a comment so that it states only the settled decision, removes traces of previous ones, and keeps the rationale. | `/pipe-skills:final-state docs/design.md` |
-| `promote-rule` | Turns a correction you just made into a durable rule, at the level it governs. | `/pipe-skills:promote-rule` |
-| `away` | Before you leave Claude to work alone for hours, proves each access the work needs, asks all its questions at once, and tells you when you can go. | `/pipe-skills:away migrate the app tonight; I can't answer questions` |
-
-## How the skills fit together
-
-One piece of work moves through the states of its issue in the tracker. Each arrow names who acts, and the skill when one runs. `setup` is not on the charts, because it runs once before the first issue, and `promote-rule` and `away` are not on them, because each can run at any time: `promote-rule` when you correct Claude, and `away` before any work you leave to Claude. The model behind the charts, and the rules that TLC checks on it, are in `docs/statecharts`.
-
-Colors: purple = talk, blue = specify, orange = build, yellow = review, teal = ship, tan = sweep.
-
-### The main workflow
-
-The path that you drive by hand, with the main skills: from an idea to an issue, then to a merge.
+## Fluxo
 
 ```mermaid
----
-title: "The main workflow, by hand"
----
-stateDiagram-v2
-  state "No issue yet" as s0 {
-    s1: Idea
-    s2: Getting an opinion
-    s3: Draft shown to you
-    s4: Being interviewed
-  }
-  state "Todo" as s5 {
-    s6: Waiting
-  }
-  state "In Progress" as s7 {
-    s8: Building in steps
-    s9: Rewriting the plan
-    s10: Under review
-    s11: Stopped, Claude asks you
-  }
-  state "In Review" as s12 {
-    s13: At the merge gate
-  }
-  state "Done" as s14 {
-    s15: Merged and closed
-  }
-  [*] --> s1
-  s1 --> s2: you ask for an opinion (/advise)
-  s1 --> s3: you run /prd
-  s1 --> s4: you ask for an interview (/interview)
-  s2 --> s3: you run /prd
-  s2 --> s4: you ask for an interview (/interview)
-  s3 --> s6: you give the go, Claude files the issue
-  s4 --> s3: you run /prd
-  s6 --> s8: you run /implement
-  s8 --> s9: a discovery changes the plan
-  s8 --> s10: the steps are committed, a fresh reviewer starts
-  s9 --> s8: the issue is rewritten (/final-state)
-  s10 --> s8: findings come back in one area, Claude changes its method or a finding is worth another round
-  s10 --> s13: no finding is worth another round
-  s10 --> s11: 3 rounds pass, or the method needs you, Claude asks you
-  s13 --> s15: you run /ship and give the go
-  s11 --> s8: you answer, the work continues
-  classDef purple fill:#f1e8ff,stroke:#7c4dcc,color:#3d2370
-  classDef blue fill:#e6f0ff,stroke:#2f6fd6,color:#173a73
-  classDef orange fill:#fff0e0,stroke:#e07a10,color:#7a3f05
-  classDef yellow fill:#fff8d6,stroke:#c9a400,color:#5c4b00
-  classDef teal fill:#def7f3,stroke:#1a9e8f,color:#0b4f47
-  class s1 purple
-  class s2 purple
-  class s3 blue
-  class s4 purple
-  class s6 blue
-  class s8 orange
-  class s9 orange
-  class s10 yellow
-  class s11 orange
-  class s13 yellow
-  class s15 teal
+flowchart LR
+    N["Pedido ou notas"] --> S["/spec"]
+    S -->|"Médio ou alto risco"| RS["/review spec"]
+    RS --> S
+    S -->|"Spec aprovado"| I["/implement"]
+    I --> RB["/review branch"]
+    RB -->|"Bloqueio"| I
+    RB -->|"Pronto e SHAs válidos"| C["/close-spec"]
+    C --> L["Squash local"]
 ```
 
-### The full lifecycle
+| Comando | Entrega |
+| --- | --- |
+| [`/spec`](skills/spec/SKILL.md) | Spec em `specs/` com risco, critérios verificáveis e passos. |
+| [`/implement`](skills/implement/SKILL.md) | Mudança em worktree, commits com `Validado:`, resultados de aceite e referências julgadas. |
+| [`/review`](skills/review/SKILL.md) | Parecer sobre o spec ou veredito sobre o diff, com evidências e SHAs. |
+| [`/close-spec`](skills/close-spec/SKILL.md) | Squash local do commit revisado, spec arquivado e pendências registradas. O push fica a cargo do usuário. |
 
-Everything else that can happen to an issue: `autonomous-loop` runs the work without you, `assess` and `sweep` check a waiting issue against the code, and `ship` warns you when the review is not clean.
+Uso o `explorer` quando preciso levantar algo no código ou nos dados antes de decidir. O `reviewer` só lê. O perfil dele aponta para GPT-6.2 Astra, da OpenAI. [Explorer](agents/explorer.md) · [Reviewer](agents/reviewer.md)
 
-```mermaid
----
-title: "One piece of work, from idea to merge"
----
-stateDiagram-v2
-  state "No issue yet" as s0 {
-    s1: Idea
-    s2: Getting an opinion
-    s3: Draft shown to you
-    s4: Being interviewed
-  }
-  state "Todo" as s5 {
-    s6: Waiting
-    s7: Skipped, verdict in the loop report
-    s8: Verdicts shown to you
-  }
-  state "In Progress" as s9 {
-    s10: Building in steps
-    s11: Rewriting the plan
-    s12: Under review
-    s13: Stopped, Claude asks you
-    s14: Warned the review is not clean
-  }
-  state "Backlog" as s15 {
-    s16: Judged not worth it
-    s17: Verdicts shown to you
-  }
-  state "Canceled" as s18 {
-    s19: Canceled
-  }
-  state "Done" as s20 {
-    s21: Closed, the code already does it
-    s22: Merged and closed
-  }
-  state "In Review" as s23 {
-    s24: At the merge gate
-  }
-  [*] --> s1
-  s1 --> s2: you ask for an opinion (/advise)
-  s1 --> s3: you run /prd
-  s1 --> s4: you ask for an interview (/interview)
-  s2 --> s3: you run /prd
-  s2 --> s4: you ask for an interview (/interview)
-  s3 --> s6: you give the go, Claude files the issue
-  s4 --> s3: you run /prd
-  s6 --> s10: /autonomous-loop takes it, /assess says current or you run /implement
-  s6 --> s16: the subagent judges it not worth its cost
-  s6 --> s7: /autonomous-loop skips it, /assess says not current
-  s6 --> s8: you run /assess or /sweep
-  s10 --> s11: a discovery changes the plan
-  s10 --> s12: the steps are committed, a fresh reviewer starts
-  s16 --> s6: you move it back to Todo
-  s16 --> s10: you run /implement
-  s16 --> s17: you run /assess or /sweep
-  s7 --> s10: /autonomous-loop takes it, /assess says current or you run /implement
-  s7 --> s16: the subagent judges it not worth its cost
-  s7 --> s8: you run /assess or /sweep
-  s8 --> s6: you reject it or you approve current or drifted
-  s8 --> s19: you approve superseded or obsolete
-  s8 --> s21: you approve done
-  s11 --> s10: the issue is rewritten (/final-state)
-  s12 --> s10: findings come back in one area, Claude changes its method or a finding is worth another round
-  s12 --> s24: no finding is worth another round
-  s12 --> s13: 3 rounds pass, or the method needs you, Claude asks you
-  s17 --> s16: you reject it or you approve current or drifted
-  s17 --> s19: you approve superseded or obsolete
-  s17 --> s21: you approve done
-  s24 --> s22: the subagent ships it [in /autonomous-loop] or you run /ship and give the go
-  s13 --> s22: the subagent ships it [in /autonomous-loop]
-  s13 --> s10: you answer, the work continues
-  s13 --> s14: you run /ship
-  s14 --> s10: you answer, the work continues
-  s14 --> s22: you give the go anyway
-  classDef purple fill:#f1e8ff,stroke:#7c4dcc,color:#3d2370
-  classDef blue fill:#e6f0ff,stroke:#2f6fd6,color:#173a73
-  classDef tan fill:#f5ecdc,stroke:#a6793a,color:#5a3e14
-  classDef orange fill:#fff0e0,stroke:#e07a10,color:#7a3f05
-  classDef yellow fill:#fff8d6,stroke:#c9a400,color:#5c4b00
-  classDef teal fill:#def7f3,stroke:#1a9e8f,color:#0b4f47
-  class s1 purple
-  class s2 purple
-  class s3 blue
-  class s4 purple
-  class s6 blue
-  class s7 blue
-  class s8 tan
-  class s10 orange
-  class s11 orange
-  class s12 yellow
-  class s13 orange
-  class s14 orange
-  class s16 blue
-  class s17 tan
-  class s19 tan
-  class s21 tan
-  class s22 teal
-  class s24 yellow
+## Instalação
+
+No repositório do pipeline, copie as pastas para `.devin/`. Os exemplos usam um checkout chamado `skills` na pasta ao lado.
+
+**Bash**
+
+```bash
+mkdir -p .devin/skills .devin/agents
+cp -r ../skills/skills/. .devin/skills/
+cp ../skills/agents/*.md .devin/agents/
 ```
 
-## Review bar
+**PowerShell**
 
-A reviewer can always find one more edge case, so the bar comes from the issue: its Business impact gives the weight of the work, and a small issue gets a small change and a short review. A fresh reviewer reads only the issue, the change, and the rules of the project, and raises only a finding the user would act on, never one that is unlikely or that fails safe. The loop ends when no blocker is left and no remaining finding is worth another round. When findings come back in one area, Claude questions its method instead of adding a guard, and after 3 rounds it stops and asks you. The reviewer classes each finding as a blocker, in scope (same root cause as the issue, or in the code it touches), or out of scope (a different root cause). Claude fixes the blockers and the in-scope findings worth their cost in the same branch, and keeps the out-of-scope findings for `ship`, which files a follow-up issue only for a reproduced bug or a feature of high value with a new root cause.
+```powershell
+New-Item -ItemType Directory -Force .devin/skills, .devin/agents | Out-Null
+Copy-Item ../skills/skills/* .devin/skills/ -Recurse
+Copy-Item ../skills/agents/*.md .devin/agents/
+```
 
-## Credits
+Para instalar globalmente, use `~/.config/devin/` ou `%APPDATA%\devin\` no Windows. Confira o identificador do modelo com `devin models list --format json`. Se alterar o modelo, atualize o campo `model:` e o nome no corpo do perfil instalado. [Skills no Devin CLI](https://docs.devin.ai/cli/extensibility/skills/creating-skills) · [Perfil do revisor](agents/reviewer.md)
 
-- `interview` is the [interview prompt](https://x.com/trq212/status/2005315275026260309) by Thariq Shihipar.
-- Many of the ideas behind this plugin are hevily inspired by [Matt Pocock](https://github.com/mattpocock/skills) and [Lauren Tan](https://github.com/cursor/plugins/tree/main/pstack).
+## Benchmarks
 
-The plugin is under the MIT License, see `LICENSE`.
+### Modelos que aparecem nos testes
+
+| Modelo | Onde entrou |
+| --- | --- |
+| GPT-6.2 Astra, da OpenAI | Revisor configurado para o Devin. Nos testes de revisão, rodou pelo Codex CLI com esforço `max`. |
+| Gemini 4 Neon, do Google | Testou a revisão e o fluxo pelo Antigravity. No teste de revisão, rodou com esforço `xhigh`. |
+| Claude Opus 5.5, da Anthropic | Rodou parte dos testes de revisão e de fluxo pelo Claude Code. No teste de revisão, rodou com esforço `max`. |
+| Nemotron 3.5 Lightning, da NVIDIA | Leu e pontuou os arquivos `SKILL.md` via NVIDIA Build. |
+
+[Método e dados dos experimentos](docs/experimentos.md) · [Configuração dos revisores](bench/expA/run_expA.py)
+
+### Notas das skills
+
+Pedi ao NVIDIA SkillEvaluator 1.0.1 para pontuar as instruções das quatro skills. A rubrica tem nove critérios. Para passar, a skill precisa de 70/100 no total e 7/10 em cada critério. Mantive a versão que teve a maior nota entre as aprovadas. [Método](docs/experimentos.md#skillevaluator) · [Documentação da NVIDIA](https://docs.nvidia.com/skills/skillevaluator/tier1-validation)
+
+![Evolução das quatro skills em sete rodadas, incluindo a confirmação](docs/charts/evolucao-rubrica.svg)
+
+A linha tracejada marca a meta de 90. Na coluna sombreada, o juiz reavaliou as versões escolhidas. A mesma versão de `review` tirou 86,8 na seleção e 76,8 na confirmação. [Notas por rodada](docs/data/rubrica-nvidia.csv) · [Resultados da confirmação](docs/experimentos.md#busca-por-90100)
+
+### Revisão de mudanças
+
+No experimento A, usei seis casos com dados sintéticos, incluindo mudanças corretas e mudanças com problemas conhecidos. O GPT-6.2 Astra encontrou 92,9% dos problemas com cada versão. O Gemini 4 Neon encontrou 100% com a skill daqui e 88,9% com a original. As versões usam idiomas diferentes e o número de execuções varia por grupo. [Resultados do experimento A](docs/data/expA_summary.csv) · [Gabarito](bench/expA/cases.json)
+
+![Problemas plantados encontrados por Astra e Neon no benchmark histórico](docs/charts/revisores.svg)
+
+### Fechamento de spec
+
+No teste de squash local, o Gemini 4 Neon cumpriu os 12 critérios nas duas tentativas com `close-spec`. Sem a skill, ficou em 9/12 e 10/12. Os pontos que faltaram tinham a ver com o registro de teste, risco ou reversão. Quando os SHAs divergiam, o Gemini cumpriu os quatro critérios com e sem a skill. [Resultados do experimento B](docs/experimentos.md#fechamento-de-spec)
+
+![Critérios cumpridos com e sem a skill nos cenários de fechamento](docs/charts/fechamento.svg)
+
+### Limites dos testes
+
+Os experimentos A e B usaram dados sintéticos e CLIs substitutos. Ainda falta rodar esses casos com as versões atuais no Devin CLI. Nas checagens estáticas, o Tier 1 passou 9/9 sem juiz após a instalação do Gitleaks. Uma repetição ficou em 8/9 porque o SkillSpector não conseguiu obter o lock.
+
+[Guia do benchmark](bench/README.md) · [Relatório de experimentos](docs/experimentos.md) · [Dados versionados](docs/data/)
+
+## Créditos
+
+Adaptei o fluxo que o Felipe Aguirre apresentou no encontro da comunidade Claude no Nubank. A skill de revisão dele também está em `bench/upstream/`, para repetir a comparação. [felipeam86/pipe-skills](https://github.com/felipeam86/pipe-skills) · [Licença MIT original](bench/upstream/LICENSE)
+
+O método de avaliação se apoia na skill de criação da Anthropic e no avaliador da NVIDIA. [Anthropic skill-creator](https://github.com/anthropics/skills/tree/main/skills/skill-creator) · [NVIDIA SkillEvaluator](https://github.com/NVIDIA/SkillEvaluator)

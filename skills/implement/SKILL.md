@@ -1,38 +1,67 @@
 ---
 name: implement
-description: Implement a Linear or GitHub issue end to end. Sets up the worktree and branch, works in committed steps, keeps the issue at its final state, reviews with a fresh reviewer until no finding is worth another round, and stops at the merge gate. For a project whose CLAUDE.md names where it tracks work. Use when the user says "implement issue ABC-123", "implement issue #42", "work on ABC-123", "build this issue", or runs /pipe-skills:implement in such a project.
-disable-model-invocation: false
+description: Use quando o usuário pedir para implementar um spec aprovado em specs/. Execute em worktree, valide cada passo e entregue a revisão antes do merge.
+argument-hint: "[caminho do spec]"
+triggers:
+  - user
 ---
 
-# Implement an issue
+# Implement
 
-The issue is the specification. The project `CLAUDE.md` names where it tracks work. Read the tracker file for it, `${CLAUDE_PLUGIN_ROOT}/trackers/linear.md` or `${CLAUDE_PLUGIN_ROOT}/trackers/github.md`, and run each operation below as that file says.
+O spec em `specs/<slug>.md` é a especificação. Planeje, edite e valide na sessão principal, que mantém o contexto de cada decisão. Não delegue a escrita do código a outro agente. Use o subagente `explorer` para leituras longas com pergunta delimitada e confira você mesmo as evidências de cada decisão.
 
-## Set up
+## Preparação
 
-- Read the issue with its comments, and every `CLAUDE.md` that governs the files it touches.
-- The target branch is the branch the user is on.
-- Create the worktree with EnterWorktree and the worktree name of the tracker file as its `name`. Name the branch, then run `git fetch origin` and check it out in the worktree: `git checkout -B <branch> origin/<branch>` when it is on the remote, so that the commits of an earlier run stay, else `git checkout -B <branch> origin/<target>`. Without a remote, `git checkout -B <branch> <target>`, or keep the local branch when it exists. Set the issue to `In Progress`.
-- With a GitHub remote, push each commit of the run, a step or a fix, so that the reviewer, the merge, and a later run see it. After the first push, when the branch has no pull request, open a draft pull request whose title starts with the issue identifier, because GitHub refuses a pull request with no commit, and link it to the issue. Without a remote, the issue holds the record.
+- Leia o spec e todo `AGENTS.md` ou `CLAUDE.md` que governa os arquivos tocados. Se o spec não tiver nível de risco ou tiver critério de aceite sem checagem, pare e pergunte ao usuário.
+- Crie uma worktree com a branch `<slug>` a partir da branch atual do usuário. Se o spec ainda não estiver commitado, faça dele o primeiro commit da branch. Anote a referência da versão aprovada, `<sha>:specs/<slug>.md`, porque o revisor confere os critérios contra ela.
+- Não faça push: o remoto é um repositório bare compartilhado pelo time, e o push é decisão do usuário.
 
-## Work in steps
+## Passos
 
-Build the simplest change that meets the success criteria, at the weight that the Business impact gives, because each guard you add is more to review, and more to maintain. Follow the decisions the issue records, and choose the rest of the method yourself.
+Construa a menor mudança que atende aos critérios, no peso que o risco exige, porque cada guarda extra é mais código para revisar e manter. Siga as decisões do spec e escolha o resto do método.
 
-For each step: implement it, validate it by the rule of the repository, and commit it with a message that starts with the issue identifier and says what the validation found.
+Execute cada passo na worktree, rode a checagem que o valida e faça commit com mensagem terminando numa linha `Validado: <comando> -> <resultado>`, ou `Validado: nenhum` com o motivo, porque `close-spec` leva essas linhas para o commit de merge. Não commite `.explore/` nem saídas temporárias. Leituras independentes podem rodar em paralelo; edições e decisões ficam na sessão principal.
 
-When a discovery changes the plan, rewrite the issue description and the pull request description to the current proposal with the `pipe-skills:final-state` skill, and put the change and its reason in an issue comment.
+Um teste que falha e depois passa sem mudança é intermitente (flaky): diga isso no relatório e no commit, mesmo que passe durante a investigação, em vez de reexecutar até passar.
 
-## Review
+Quando um passo falha, confira primeiro se a checagem executa e mostra o erro. Use a falha para corrigir a implementação, sem afrouxar a checagem. Se a mesma abordagem falhar duas vezes, mude o método com base nas evidências; se não houver alternativa fundamentada, pare e entregue ao usuário o erro, o que foi tentado e a decisão necessária.
 
-Start a fresh reviewer subagent on the most capable model you have, with the `pipe-skills:review` skill. Give it the issue identifier and the pull request number, or the worktree path, the branch and the target branch, and nothing more: no account of your work and no earlier findings, so that it judges the change as it is.
+Quando uma descoberta mudar o plano, reescreva o spec para seu estado final e avise o usuário. Se mudar o objetivo ou um critério de aceite, espere o ok do usuário, commite o spec com "aprovado pelo usuário" na mensagem e use esse commit como nova referência aprovada.
 
-You decide what this branch fixes. Fix every blocker, and each in-scope finding that is worth its cost at the weight of the issue. Do not fix out-of-scope findings: keep them for the merge-gate comment. Drop a finding you disagree with, and say why in one line. Commit the fixes and start a new reviewer.
+## Revisão
 
-When findings come back in one area after a fix, stop adding guards there: question the method, and change it or ask the user, because each new guard brings a new finding.
+Rode todos os critérios de aceite antes da revisão: nenhum revisor substitui uma checagem executável.
 
-The loop ends when no blocker is left and no remaining finding is worth another round. After 3 rounds, stop and ask the user, because by then the problem is in the method or in the specification.
+Depois rode a skill `review` em modo branch (`/review branch <spec> <worktree> <branch> <target> <approved ref>`), que executa no subagente `reviewer` com um modelo de outro fornecedor; na primeira rodada, não envie seu raciocínio, para que o revisor julgue a mudança como ela está. Rodadas: risco baixo até 2, médio até 2, alto até 3; se o revisor subir o risco, use o limite do novo risco.
 
-## Merge gate
+Antes de corrigir, reproduza cada bloqueio a partir da falha apontada pelo revisor (rode o comando, leia a linha); um bloqueio que você não conseguir reproduzir vai para o usuário marcado como não confirmado. Corrija todo bloqueio confirmado e cada achado no escopo cujo custo compense. Achados fora do escopo vão para o relatório. Você pode descartar um achado do qual discorde dando o motivo em uma linha, mas um bloqueio contestado vai para o usuário. Commite as correções e, se restar rodada, rode `review` de novo passando os SHAs da branch e do alvo julgados na rodada anterior e cada achado com o que foi feito (corrigido em `<sha>`, ou descartado: motivo), para o revisor conferir as correções e decidir se pode revisar só o delta. Em risco baixo, a segunda rodada existe apenas para conferir correções.
 
-Do not merge. Set the issue to `In Review`, and add a comment with the branch, the target branch, the final verdict, the out-of-scope findings, and the in-scope findings you did not fix with their reason. Report the verdict first, what you built, what the validation showed, and whether a reviewer read the last commit.
+Quando achados voltam para a mesma área depois de uma correção, pare de empilhar guardas: questione o método e mude-o, ou pergunte ao usuário, porque cada guarda nova traz um achado novo. Se o limite de rodadas terminar com bloqueio aberto, pare e pergunte: o problema está no método ou no spec. Na última rodada, com veredito pronto, não commite melhorias no escopo: deixe no relatório, porque um commit novo ficaria sem revisão.
+
+## Portão
+
+Não faça merge nem push; isso pertence a `close-spec`. O veredito só é pronto com todos os critérios passando no HEAD atual, nenhum teste flaky sem causa encontrada, nenhum bloqueio aberto e os SHAs da branch e do alvo coincidindo com os da última revisão. Relate, nesta ordem, porque `close-spec` pode rodar em outra sessão e depende disso:
+
+1. O veredito e o risco final (o do spec, ou o que o revisor elevou).
+2. Spec, referência aprovada, worktree, branch e alvo.
+3. Os SHAs (branch, alvo, base) que a última revisão julgou, comparados com o HEAD atual, e o modelo do revisor.
+4. Cada critério de aceite com seu comando e resultado.
+5. Achados descartados com o motivo, achados no escopo não corrigidos e achados fora do escopo.
+
+## Exemplos de implementação
+
+| Pedido | Ação e resultado esperado |
+| --- | --- |
+| `/implement specs/receita-liquida.md` | Crie a worktree de `receita-liquida`. Numa amostra com R$ 100 de venda e R$ 20 de estorno, confira os R$ 80 previstos no spec. Registre a validação no commit e entregue o veredito com os SHAs julgados. |
+| “Pode executar o plano que aprovei em `specs/arredondamento.md`?” | Registre a referência aprovada. Se o arredondamento alimentar o comitê, rode a checagem diferencial e a checagem ponta a ponta do spec antes da revisão de risco alto. |
+| “Pode codar o spec aprovado que acabamos de discutir?” | Recupere o caminho da versão aprovada na conversa e use esse arquivo como referência na worktree. Se houver mais de um spec possível, confirme qual deve ser implementado. |
+| “Implemente `specs/filtro-ativos.md`.” O critério de contagem de descartes está sem checagem. | Aponte o critério sem prova e peça a checagem de aceite antes de editar. |
+| “Implemente o spec de conciliação e deixe a branch pronta para revisão e merge.” A checagem passa numa repetição sem mudança. | Registre a intermitência e investigue a causa. Enquanto o teste continuar sem explicação, relate o estado como não pronto e preserve a branch para retomar. |
+
+Pedidos próximos usam outras skills:
+
+| Pedido | Ação |
+| --- | --- |
+| “Escreva um plano para filtrar pedidos ativos.” | Use `spec` para produzir o plano. |
+| “Confira se esta branch implementa o spec.” | Use `review` para julgar a branch existente. |
+| “Faça o squash e arquive o spec já revisado.” | Use `close-spec` para verificar os SHAs e fechar o trabalho. |

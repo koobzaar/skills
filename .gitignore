@@ -1,0 +1,21 @@
+# Saídas locais de agentes e avaliações
+.headless/
+reports/
+**/evals/results/
+
+# Ambientes e caches
+.venv/
+__pycache__/
+*.py[cod]
+
+# Credenciais locais
+.env
+.env.*
+!.env.example
+
+# Benchmark: fixtures geradas, cópias de execução e resultados brutos
+bench/fixtures/*
+!bench/fixtures/*.bundle
+bench/runs/
+bench/expA/results/
+bench/expB/results*/
