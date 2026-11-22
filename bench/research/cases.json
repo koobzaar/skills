@@ -43,7 +43,7 @@
     }
   },
   "triggers": {
-    "_sobre": "Com a skill instalada e sem mencioná-la. Conta como acionada se o agente ler o SKILL.md da skill.",
+    "_sobre": "Com a skill instalada, sem mencioná-la e sem a nota da ferramenta. Conta como acionada se o agente ler o SKILL.md da skill.",
     "positivo-novidade": {"prompt": "Antes de escrever o spec, quero saber se alguém já usou a Lei de Benford para avaliar subnotificação de óbitos de COVID-19. É projeto pessoal, pode buscar.", "should_trigger": true},
     "negativo-explicar": {"prompt": "Explique em poucas linhas o que é a Lei de Benford.", "should_trigger": false},
     "negativo-resumir": {"prompt": "Resuma em três frases o texto de notas/texto.md.", "should_trigger": false,
