@@ -93,8 +93,15 @@ def _bad_id(s):
         return True
 
 
-def grade_case(cid, run, corpus, by_doi):
+def web_searches(run):
+    """A busca web nativa do codex escapa do corpus local; qualquer uso invalida o isolamento da execução."""
+    return sum(1 for l in (run / "events.jsonl").read_text(encoding="utf-8").splitlines() if '"type":"web_search"' in l and '"item.completed"' in l)
+
+
+def grade_case(cid, run, corpus, by_doi, original=False):
     e = CASES["cases"][cid]["expect"]
+    if original and "original" in e:
+        e = {**e, **e["original"]}
     text, cmds = output_text(run), commands(run)
     low = text.lower()
     lit_calls = [c for c in cmds if "lit.py" in c and re.search(r"\b(search|get|snippets)\b", c)]
@@ -135,12 +142,15 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("out")
     ap.add_argument("--csv")
+    ap.add_argument("--original", action="store_true", help="corrige pelo gabarito anterior à revisão 1")
     a = ap.parse_args()
     corpus, by_doi = load_corpus()
     rows = []
     for meta_p in sorted(pathlib.Path(a.out).glob("*/*/meta.json")):
         run, meta = meta_p.parent, json.loads(meta_p.read_text(encoding="utf-8"))
-        res = grade_case(meta["case"], run, corpus, by_doi) if meta["kind"] == "case" else grade_trigger(meta["case"], run)
+        res = grade_case(meta["case"], run, corpus, by_doi, a.original) if meta["kind"] == "case" else grade_trigger(meta["case"], run)
+        nweb = web_searches(run)
+        res["isolamento"] = (nweb == 0, f"{nweb} buscas web nativas")
         for crit, (ok, detail) in res.items():
             rows.append({"case": meta["case"], "arm": meta["arm"], "attempt": meta["attempt"], "criterion": crit, "pass": int(ok),
                          "detail": detail, "model": meta["model"], "effort": meta["effort"], "skill_sha": meta["skill_sha"],

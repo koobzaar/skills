@@ -65,7 +65,7 @@ def run_one(kind, cid, arm, n, root):
     env = {k: v for k, v in os.environ.items() if not re.search(r"KEY|SECRET|TOKEN", k, re.I) or k.startswith("CODEX") or k == "OPENAI_API_KEY"}
     env["LIT_CORPUS"] = str(CORPUS)
     cmd = [shutil.which("codex") or "codex", "exec", "-m", MODEL, "-c", f"model_reasoning_effort={EFFORT}", "--sandbox", "workspace-write",
-           "-c", "sandbox_workspace_write.network_access=false", "--skip-git-repo-check", "--ephemeral", "--json",
+           "-c", "sandbox_workspace_write.network_access=false", "-c", "web_search=\"disabled\"", "--skip-git-repo-check", "--ephemeral", "--json",
            "-C", str(repo), "-o", str(out / "final.md"), "-"]
     t0 = time.time()
     try:
