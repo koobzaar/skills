@@ -39,6 +39,19 @@ O Claude Code só roda modelos Claude em subagentes. Para usar estas skills nele
 | Sem persona ("você é um revisor sênior") | Personas de especialista não melhoraram a acurácia em nenhum modelo testado pela Wharton GAIL; um preprint da USC mediu queda em tarefas de conhecimento. A skill descreve a tarefa, quem lê o relatório e o critério de cada achado. | [Wharton GAIL, dez/2025](https://gail.wharton.upenn.edu/research-and-insights/playing-pretend-expert-personas/); [USC, arXiv 2603.18507](https://www.theregister.com/software/2026/03/24/telling-an-ai-model-that-its-an-expert-makes-it-worse/5226049) |
 | O prompt diz que roda sem interação, pede premissas explícitas e relatório autossuficiente, e nomeia o modelo no relatório | São as recomendações dos guias de prompting da OpenAI e do Google para execuções sem usuário. O modelo é nomeado no perfil do subagente, porque é ele que fixa o modelo. | [OpenAI GPT-6.2](https://developers.openai.com/api/docs/guides/latest-model/gpt-6.2-astra); [Google prompting strategies](https://aistudio.google.com/docs/prompting-strategies) |
 
+## Conferência e benchmark
+
+Origem: [Shah e Kathrotia, "Harnesses That Improve Themselves", arXiv 2611.22299v1](https://arxiv.org/abs/2611.22299v1), lido em 2026-11-22 e discutido com o Codex (`gpt-6.2-sol`) e o Gemini 4 Neon, que leram o repositório de forma independente. A evidência própria do paper é pequena: 40 tarefas no teste final, sem repetições nem intervalos; a reescrita livre e a evolução modular diferem por uma tarefa. Ele serve para escolher o que testar aqui, não para importar números.
+
+| Decisão | Motivo | Fonte |
+| --- | --- | --- |
+| `close-spec/conferir.py` confere SHAs, worktree, spec aprovado e linhas `Validado:`; `implement` roda o script antes de dar pronto e `close-spec` antes do squash | No paper, uma regra escrita proibindo encerrar sem teste não impediu o modelo de encerrar (saídas sem verificação de 15% para 30% no Gemini 3.8 Flash), e um hook em código as zerou. Os critérios de aceite continuam com o agente, porque os comandos variam por spec. | Paper, seção VII e Tabela IV |
+| Cópias de execução do bench numa pasta temporária fora do repositório; Claude com só as configurações do projeto temporário | Com a cópia dentro de `bench/runs/`, o gabarito e os graders estavam a poucos `../` do agente avaliado. | Paper, seção VI e Tabela III-A.1 |
+| `revisao_rodou` exige a chamada no trace; `close-feliz` exige squash sem nada fora de `specs/` além do revisado | O critério antigo passava com um relatório que só citava "pronto", um SHA e "bloqueio". | Paper, Tabela II (modo 5); conferido em `grade_expB.py` |
+| Falhas e timeouts entram na taxa e no custo, com custo por sucesso | `analyze.py` e `grade_expA.py` descartavam `exit != 0`, o que esconde custo e erro. | Paper, Tabela III-B.2 |
+| Lote reservado `cases_reserva.json`, de outro domínio (janela de datas para o CRM) | Os mesmos casos serviam para ajustar a skill e para afirmar o ganho. | Paper, seção IV, Fig. 2 (salvaguarda 4) |
+| Não adotados: loop automático de auto-edição, limite de turnos, exigir diff não vazio, apagar o histórico git das fixtures | O runtime é o Devin, não código deste repositório; `review` e `close-spec` podem terminar corretamente sem diff; os casos de SHA dependem do histórico. | Julgamento, apontado pelo Codex |
+
 ## Tracker
 
 O upstream tem `trackers/github.md` (GitHub Issues + Projects pelo `gh`) e `trackers/linear.md` (MCP do Linear). Não há opção local: as duas pedem um serviço externo, e as skills do upstream (`prd`, `assess`, `implement`) leem o tracker do `CLAUDE.md` do projeto.

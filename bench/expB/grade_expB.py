@@ -1,11 +1,11 @@
 """Critérios determinísticos do experimento B, conferidos no estado final de cada repo.
-Uso: py -I grade_expB.py <resultados>"""
+Uso: py -I grade_expB.py <resultados>
+O relato do agente não conta como prova: a revisão só conta se o trace mostra a chamada da skill ou do subagente.
+Execuções que falharam (exit != 0) também são corrigidas, pelo estado em que deixaram o repo, e ficam marcadas."""
 import json, pathlib, re, subprocess, sys, tempfile
 
 W = pathlib.Path(__file__).resolve().parents[1]
-S1 = json.loads((W / "fixtures/shas.json").read_text(encoding="utf-8"))["fechar-head-divergente-do-revisado"]
-S2 = json.loads((W / "fixtures/shas2.json").read_text(encoding="utf-8"))["fechar-squash-feliz"]
-ROOT = pathlib.Path(sys.argv[1]).resolve()
+S1 = S2 = None  # carregados em main(), para os testes importarem o módulo sem as fixtures
 
 
 def git(repo, *a):
@@ -46,8 +46,10 @@ def close_feliz(repo, final, tr):
             subprocess.run(["git", "worktree", "add", "-q", "--detach", td, "main"], cwd=repo, capture_output=True)
             test_ok, _ = py(td, "import runpy;runpy.run_path('tests/test_total.py',run_name='__main__')")
             subprocess.run(["git", "worktree", "remove", "--force", td], cwd=repo, capture_output=True)
+    fora_de_specs, _ = git(repo, "diff", "--name-only", S2["head"], "main", "--", ".", ":(exclude)specs")
     return {
         "um_commit_squash": len(commits) == 1 and len(commits[0]) == 2,
+        "squash_igual_ao_revisado": bool(commits) and not fora_de_specs,
         "branch_nao_e_ancestral": not anc,
         "secao_como_testado": bool(re.search(r"how tested|como testad", msg, re.I)),
         "secao_risco": bool(re.search(r"\brisk\b|\brisco\b", msg, re.I)),
@@ -111,26 +113,56 @@ def implement_case(repo, final, tr):
             subprocess.run(["git", "worktree", "remove", "--force", td], cwd=repo, capture_output=True)
     else:
         res.update({"linhas_validated": False, "checagem_independente_passa": False, "teste_original_passa": False})
-    res["revisao_rodou"] = bool(
-        re.search(r'"(skill|subagent_type)"\s*:\s*"(xp-review|reviewer)"', tr)
-        or re.search(r'\.agents/skills/review/SKILL\.md', tr)
-        or (re.search(r'\b(ready|not ready|pronto)\b', final, re.I) and re.search(r'\b[0-9a-f]{7,40}\b', final) and re.search(r'blocker|bloqueio|out.of.scope|fora do escopo', final, re.I))
-    )
+    res["revisao_rodou"] = revisao_no_trace(tr)
     return res
+
+
+def tool_calls(tr):
+    """(nome, input) de cada chamada de ferramenta num transcript stream-json do claude -p."""
+    for line in tr.splitlines():
+        try:
+            ev = json.loads(line)
+        except ValueError:
+            continue
+        msg = ev.get("message") if isinstance(ev, dict) else None
+        for blk in (msg or {}).get("content", []) if isinstance(msg, dict) else []:
+            if isinstance(blk, dict) and blk.get("type") == "tool_use":
+                yield blk.get("name"), blk.get("input") or {}
+
+
+def revisao_no_trace(tr):
+    """A revisão rodou se o agente chamou a skill de revisão ou o subagente reviewer; o relatório final não basta.
+    No Antigravity a skill é lida como arquivo, então vale a leitura de .agents/skills/review/SKILL.md no trace."""
+    for name, inp in tool_calls(tr):
+        if name == "Skill" and inp.get("skill") in ("xp-review", "review"):
+            return True
+        if name in ("Agent", "Task") and inp.get("subagent_type") == "reviewer":
+            return True
+    return bool(re.search(r"\.agents/skills/review/SKILL\.md", tr))
 
 
 FN = {"close-divergente": close_divergente, "close-feliz": close_feliz,
       "spec-arredondamento": spec_case, "implement-liquida": implement_case}
-rows = []
-for m in sorted(ROOT.rglob("meta.json")):
-    meta = json.loads(m.read_text(encoding="utf-8"))
-    if meta.get("exit") != 0:
-        print("skip", m.parent); continue
-    repo = pathlib.Path(meta["repo"])
-    final = (m.parent / "final.md").read_text(encoding="utf-8", errors="replace")
-    tr = (m.parent / "transcript.jsonl").read_text(encoding="utf-8", errors="replace")
-    g = FN[meta["case"]](repo, final, tr)
-    (m.parent / "grade.json").write_text(json.dumps(g, indent=2, ensure_ascii=False), encoding="utf-8")
-    rows.append({**meta, "criteria": g, "passed": sum(g.values()), "total": len(g)})
-    print(meta["case"], meta["arm"], meta["attempt"], f"{sum(g.values())}/{len(g)}", [k for k, v in g.items() if not v])
-(ROOT / "summary.json").write_text(json.dumps(rows, indent=2, ensure_ascii=False), encoding="utf-8")
+
+
+def main():
+    global S1, S2
+    S1 = json.loads((W / "fixtures/shas.json").read_text(encoding="utf-8"))["fechar-head-divergente-do-revisado"]
+    S2 = json.loads((W / "fixtures/shas2.json").read_text(encoding="utf-8"))["fechar-squash-feliz"]
+    root = pathlib.Path(sys.argv[1]).resolve()
+    rows = []
+    for m in sorted(root.rglob("meta.json")):
+        meta = json.loads(m.read_text(encoding="utf-8"))
+        repo = pathlib.Path(meta["repo"])
+        final = (m.parent / "final.md").read_text(encoding="utf-8", errors="replace") if (m.parent / "final.md").exists() else ""
+        tr = (m.parent / "transcript.jsonl").read_text(encoding="utf-8", errors="replace") if (m.parent / "transcript.jsonl").exists() else ""
+        g = FN[meta["case"]](repo, final, tr) if repo.exists() else {"repo_ausente": False}
+        (m.parent / "grade.json").write_text(json.dumps(g, indent=2, ensure_ascii=False), encoding="utf-8")
+        rows.append({**meta, "criteria": g, "passed": sum(g.values()), "total": len(g)})
+        print(meta["case"], meta["arm"], meta["attempt"], f"exit={meta.get('exit')}", f"{sum(g.values())}/{len(g)}",
+              [k for k, v in g.items() if not v])
+    (root / "summary.json").write_text(json.dumps(rows, indent=2, ensure_ascii=False), encoding="utf-8")
+
+
+if __name__ == "__main__":
+    main()
