@@ -58,3 +58,60 @@ O [resumo histórico do experimento A](data/expA_summary.csv) preserva 59 execu�
 O texto anterior fixava os SHAs para ler o diff, mas a execução na worktree podia observar outro commit ou alterações locais. Também faltava transmitir o SHA anterior do alvo para justificar uma revisão incremental. A revisão desta iteração exige que a worktree corresponda ao commit julgado, transmite ambos os SHAs à rodada seguinte e usa o commit revisado como argumento do squash. Os [casos de regressão](../bench/README.md#regressões-de-sha) descrevem os resultados esperados.
 
 Um teste local substituiu a chamada ao modelo por asserções no runner do experimento A. Confirmou que a cópia começa limpa na branch certa, que o prompt inclui os dois SHAs da rodada anterior e que, ao avançar a referência do alvo, o prompt conserva o SHA anterior. A fixture original continuou na branch alvo. A resposta das skills aos casos de regressão segue sem avaliação comportamental nesta iteração.
+
+## Pesquisa em literatura
+
+A skill `research` foi medida com o [bench próprio](../bench/README.md#skill-research). Os casos usam a Lei de Benford aplicada aos óbitos de COVID-19, com gabarito conferido nos resumos do OpenAlex e da Semantic Scholar antes das execuções. O agente é o Codex CLI 0.170.0 com `gpt-6.2-sol` e esforço `medium`, no lugar do Devin. A rede do sandbox fica desligada e o `lit.py` lê um corpus local de 179 papers. Os dois braços recebem o mesmo `tools/lit.py` e o mesmo pedido; só o braço com skill tem o `SKILL.md`. Cada célula é uma tentativa.
+
+### Iteração 1
+
+| Caso | Com skill | Sem skill | Sem skill, gabarito original |
+| --- | ---: | ---: | ---: |
+| `ja-feito` | 5/5 | 4/5 | 3/5 |
+| `premissa-contradita` | 5/5 | 4/5 | 2/5 |
+| `citacao-falsa` | 5/5 | 4/5 | 4/5 |
+| `confirmacao-trabalho` | 3/3 | 2/3 | 2/3 |
+
+Com a skill, os relatórios citaram 9, 10 e 13 trechos, todos literais no paper citado. Sem a skill, nenhuma resposta trouxe trecho entre aspas, e o braço buscou nove vezes no caso de trabalho antes de pedir o ok. Nos dois braços, o DOI inventado da nota foi barrado e a conclusão invertida de Campolieti (2021) foi apontada. Nenhum DOI fora do corpus apareceu.
+
+O gabarito foi revisado depois de ler a iteração 1, para os dois braços. O braço sem skill achou evidência real fora da lista, como Galvêas et al. (2021) e Butgereit (2021), e escreveu vereditos corretos com outras palavras, como "tem precedente direto". A coluna da direita corrige pela versão anterior, guardada em `expect.original`. A diferença entre os braços vem de critérios que a skill pede explicitamente: trecho literal e ok antes da busca. O veredito e a escolha da evidência ficaram parecidos.
+
+| Caso | Tokens de entrada com / sem | Tokens de saída com / sem | Segundos com / sem |
+| --- | ---: | ---: | ---: |
+| `ja-feito` | 782.950 / 261.676 | 5.234 / 1.307 | 149 / 49 |
+| `premissa-contradita` | 776.794 / 176.115 | 5.686 / 1.158 | 159 / 44 |
+| `citacao-falsa` | 1.289.683 / 268.552 | 7.911 / 1.383 | 264 / 67 |
+| `confirmacao-trabalho` | 47.476 / 259.660 | 554 / 1.605 | 18 / 55 |
+
+Mais de 90% da entrada com skill veio do cache. A skill custa de três a cinco vezes mais tokens e tempo, porque faz até quatro rodadas de busca, o `verify` e a revisão.
+
+No acionamento, a skill foi lida no pedido sobre novidade e não foi lida nos quatro pedidos próximos: explicar Benford, resumir uma nota, escrever um spec e calcular dígitos de um CSV. O pedido positivo, porém, usou a busca web nativa do Codex, que o bloqueio de rede do sandbox não cobre, e a resposta final citou links do PMC fora do `lit.py`. As demais execuções não usaram essa busca. O runner passou a desligá-la (`web_search="disabled"`) e o grader reprova qualquer uso no critério `isolamento`. A skill ganhou uma frase: na resposta final, citar pelos IDs do registro.
+
+### Iteração 2
+
+Com a frase nova e a busca web desligada, repeti o caso afetado e uma regressão, só com a skill. O pedido positivo leu a skill, não usou busca web e citou pelos IDs do registro (2/2). `ja-feito` passou em 6/6, com 13 trechos literais. Notas por critério: [iteração 1](data/research_iter1.csv), [iteração 2](data/research_iter2.csv).
+
+A revisão semântica não roda no Codex como no Devin. Em `citacao-falsa`, o agente abriu um subagente próprio e o relatório registra a revisão. Em `premissa-contradita` e `positivo-novidade`, ela ficou marcada como pendente.
+
+### Passo de revisão
+
+O [relatório de teste](../bench/research/reviewer/relatorio.md) tem três evidências literais, e uma delas não sustenta a afirmação. Com o perfil do `reviewer` e o pedido da skill, o Gemini 3.8 Flash no Antigravity marcou só essa como "não apoia" em uma tentativa (3/3).
+
+### Checagens estáticas
+
+| Checagem | Resultado |
+| --- | --- |
+| `quality-check` | 87,2/100, PASS |
+| `harness-check` | Carrega nos seis agentes; cinco degradados só porque não substituem `$ARGUMENTS` |
+| Tier 1 `--no-llm` | 9/10, FAIL no Security Scan: fluxo de dados do `urlopen` (crítico), envio a api.semanticscholar.org e privilégio mínimo (médios) |
+| `tier3 validate` | Erro: a skill não tem `evals/`, porque o bench fica em `bench/` |
+| Rubrica com juiz Nemotron 3.5 Lightning | 79,5/100 antes da última frase; 72,7/100 depois |
+
+O Security Scan aponta o propósito do script: ele faz requisições HTTPS ao OpenAlex, ao Crossref e à Semantic Scholar, com o texto das queries. O risco foi aceito e não foi silenciado. A diferença na rubrica veio de uma única frase acrescentada e repete a variação do juiz já vista em `review`.
+
+### Limites
+
+- O agente foi o Codex, no lugar do Devin, sem os subagentes `researcher` e `reviewer` do Devin.
+- O corpus local é buscado por pontuação de termos, que difere do ranking do OpenAlex e da Semantic Scholar. A qualidade da busca real foi conferida à mão durante o desenvolvimento, sem bench.
+- Uma tentativa por célula; não separa ganho de variação do modelo.
+- O Tier 3 `evaluate` do SkillEvaluator e o Devin CLI não foram executados.
