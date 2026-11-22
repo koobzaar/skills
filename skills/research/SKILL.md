@@ -29,7 +29,7 @@ Queries vagas trazem papers que só mencionam os termos: escreva cada query com 
 Delegue a busca ao subagente `researcher`, que lê os resumos fora do seu contexto. Envie as afirmações, as queries aprovadas, o caminho do `lit.py` e o do registro. Se o subagente estiver indisponível, faça a busca você mesmo com as mesmas regras:
 
 - Julgue a relevância pelo resumo ou pelo trecho, nunca só pelo título. Use `get` para o resumo completo, `snippets` para o corpo do texto e `--sort cited` para achar os trabalhos de referência do tema.
-- Pese a qualidade de cada fonte. Prefira artigo revisado por pares e revisão sistemática. Preprint, paper sem citações e periódico desconhecido podem entrar, mas a evidência diz isso e o veredito não se apoia só neles. Paper retratado nunca vale como evidência.
+- Pese a qualidade de cada fonte. Prefira artigo revisado por pares e revisão sistemática. Preprint, periódico desconhecido e paper antigo com poucas citações podem entrar, mas a evidência e o veredito dizem isso; poucas citações num paper recente não são defeito. Paper retratado nunca vale como evidência.
 - Nas rodadas seguintes, acrescente às queries apenas termos e autores dos papers obtidos. Pare quando uma rodada não trouxer paper relevante novo ou depois de quatro rodadas, e registre qual dos dois aconteceu.
 - Se uma fonte falhar ou atingir o limite, registre isso: busca incompleta não demonstra ausência.
 

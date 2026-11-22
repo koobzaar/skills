@@ -11,7 +11,7 @@ IDs: doi:10..., s2:<corpusId>, pmid:<n>, arxiv:<id>, openalex:W<n>.
 Cada resultado mostra citações, tipo de publicação e se foi retratado.
 Todo paper obtido entra no registro (--registry, padrão research/papers.jsonl); verify só aceita IDs do registro.
 Saída: 0 ok; 1 verify com falha; 2 ID não existe; 3 fonte indisponível ou resposta inconclusiva; 4 argumento inválido.
-Variáveis: S2_API_KEY (opcional), OPENALEX_API_KEY (opcional), LIT_CORPUS (corpus local .jsonl; desliga a rede).
+Variáveis: S2_API_KEY ou SEMANTIC_API_KEY (opcional), OPENALEX_API_KEY (opcional), LIT_CORPUS (corpus local .jsonl; desliga a rede).
 """
 import argparse, json, math, os, re, sys, time, unicodedata
 import urllib.error, urllib.parse, urllib.request
@@ -76,8 +76,12 @@ def http_json(url, headers=None, s2=False):
             raise ApiError(f"resposta inválida de {host}: {e}")
 
 
+def s2_key():
+    return os.environ.get("S2_API_KEY") or os.environ.get("SEMANTIC_API_KEY")
+
+
 def s2_headers():
-    k = os.environ.get("S2_API_KEY")
+    k = s2_key()
     return {"x-api-key": k} if k else {}
 
 
@@ -306,7 +310,7 @@ def online_search(q, limit, year, sort):
         out += [from_openalex(w) for w in http_json(f"{OPENALEX}/works?{oa_params(**p)}").get("results", [])]
     except (ApiError, NotFound) as e:
         errs.append(f"OpenAlex: {e}")
-    if os.environ.get("S2_API_KEY"):
+    if s2_key():
         p = {"query": q, "limit": limit, "fields": S2_FIELDS, **({"year": year} if year else {})}
         try:
             out += [from_s2(x) for x in http_json(f"{S2}/paper/search?{urllib.parse.urlencode(p)}", s2_headers(), s2=True).get("data") or []]
@@ -339,7 +343,7 @@ def online_get(cid):
     if kind == "doi" and not found:
         attempt("Crossref", lambda: from_crossref(http_json(f"{CROSSREF}/works/{urllib.parse.quote(v, safe='/')}")["message"]))
     s2id = {"doi": "DOI:", "pmid": "PMID:", "s2": "CorpusId:"}.get(kind)
-    if s2id and (kind == "s2" or os.environ.get("S2_API_KEY")):
+    if s2id and (kind == "s2" or s2_key()):
         attempt("Semantic Scholar", lambda: from_s2(http_json(f"{S2}/paper/{urllib.parse.quote(s2id + v, safe=':/')}?fields={S2_FIELDS}", s2_headers(), s2=True)))
     if found:
         for e in errs:
