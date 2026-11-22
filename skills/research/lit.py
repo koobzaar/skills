@@ -51,8 +51,8 @@ def http_json(url, headers=None, s2=False, body=None):
     data = None
     if body is not None:
         data, h["Content-Type"] = json.dumps(body).encode(), "application/json"
-    delay = 2.0
-    for attempt in range(5):
+    delay = 3.0
+    for attempt in range(6):
         wait = _last_call.get(host, 0) + 1.1 - time.time()  # 1 req/s por fonte: limite da S2 com chave e rajada do OpenAlex
         if wait > 0:
             time.sleep(wait)
@@ -63,14 +63,14 @@ def http_json(url, headers=None, s2=False, body=None):
         except urllib.error.HTTPError as e:
             if e.code == 404:
                 raise NotFound(url)
-            if e.code in (429, 500, 502, 503, 504) and attempt < 4:
+            if e.code in (429, 500, 502, 503, 504) and attempt < 5:  # a S2 limita em rajadas; recuo de até ~90 s
                 ra = e.headers.get("Retry-After")
                 time.sleep(float(ra) if ra and ra.isdigit() else delay)
                 delay *= 2
                 continue
             raise ApiError(f"HTTP {e.code} em {url.split('?')[0]}" + (" (limite da API; tente depois ou use a chave)" if e.code == 429 else ""))
         except (urllib.error.URLError, TimeoutError, ConnectionError, OSError) as e:
-            if attempt < 4:
+            if attempt < 5:
                 time.sleep(delay)
                 delay *= 2
                 continue
