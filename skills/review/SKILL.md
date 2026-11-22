@@ -18,6 +18,8 @@ Use o modo explícito `spec` ou `branch` quando informado. Em pedidos em linguag
 | `spec` | Caminho do spec e acesso ao código ou à amostra que sustenta a proposta. | Parecer sobre abordagem, critérios e risco. Se o arquivo não existir, indique o caminho consultado e peça que seja fornecido na próxima chamada. |
 | `branch` | Spec, worktree, branch e alvo. A referência aprovada e os dados da rodada anterior são opcionais. | Veredito e evidências para os SHAs fixados. Se uma referência obrigatória não resolver, devolva **Não pronto** com a referência e o erro de Git. |
 
+Em qualquer modo, quando o spec ou o diff fizer uma escolha estatística ou de modelagem (estimador, teste, validação, métrica, tratamento de nulos, desbalanceamento ou dependência entre observações) e houver motivo concreto para duvidar que seja a mais adequada aos dados, diga isso em uma linha no fim do relatório e sugira `/research` com a pergunta. Isso não é achado nem bloqueio, salvo se você provar um número errado num caso concreto.
+
 ## Revisão de branch
 
 ### Leitura

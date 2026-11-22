@@ -18,7 +18,7 @@ O spec em `specs/<slug>.md` é a especificação. Planeje, edite e valide na ses
 
 ## Passos
 
-Construa a menor mudança que atende aos critérios, no peso que o risco exige, porque cada guarda extra é mais código para revisar e manter. Siga as decisões do spec e escolha o resto do método.
+Construa a menor mudança que atende aos critérios, no peso que o risco exige, porque cada guarda extra é mais código para revisar e manter. Siga as decisões do spec e escolha o resto do método. Se o spec não fixar uma escolha estatística ou de modelagem e houver dúvida de que a sua seja a mais adequada aos dados, use `research` antes de implementá-la.
 
 Execute cada passo na worktree, rode a checagem que o valida e faça commit com mensagem terminando numa linha `Validado: <comando> -> <resultado>`, ou `Validado: nenhum` com o motivo, porque `close-spec` leva essas linhas para o commit de merge. Não commite `.explore/` nem saídas temporárias. Leituras independentes podem rodar em paralelo; edições e decisões ficam na sessão principal.
 
