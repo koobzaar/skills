@@ -22,7 +22,8 @@ O método segue o ciclo da [skill-creator do Claude](https://github.com/anthropi
 - Defina antes da execução o resultado esperado e critérios observáveis: arquivos produzidos, comandos executados, valores corretos, achados e ações que não podem ocorrer. Não avalie apenas a presença de palavras na resposta.
 - Versione prompts, fixtures sintéticas, gabaritos, critérios e scripts em `bench/`, fora das pastas das skills, para que quem copia `skills/` não leve o benchmark. Para o Tier 3 do SkillEvaluator, use o contrato de `evals/evals.json` da versão utilizada.
 - Um caso deve ser reproduzível em outro checkout. Prepare os repositórios, branches e dados de teste por fixture ou script; não dependa de caminhos absolutos da máquina do autor.
-- O agente avaliado recebe o pedido e os insumos necessários, sem o gabarito, os graders ou conclusões de execuções anteriores.
+- O agente avaliado recebe o pedido e os insumos necessários, sem o gabarito, os graders ou conclusões de execuções anteriores. A cópia de trabalho de cada execução fica fora deste repositório, onde o agente não alcança `bench/`, e o grader confere o que aconteceu pelo trace e pelo estado final, não pelo relato do agente.
+- Separe os casos de desenvolvimento, usados para achar falhas e ajustar a skill, de um lote reservado (`cases_reserva.json`), de outro domínio, que só roda com a versão candidata congelada. Não ajuste a skill nem o gabarito pelo resultado do lote reservado na mesma iteração; reporte os dois lotes separados.
 
 ### Verificações estáticas
 
@@ -51,6 +52,8 @@ skillevaluator tier3 evaluate ./skills/review --agents claude-code --env-mode do
 
 - A execução padrão compara com e sem skill. Não use `--skip-baseline` ao afirmar ganho. Fixe e registre o modelo e a configuração; as tentativas repetidas ajudam a distinguir melhoria de variação do modelo.
 - Verifique critérios determinísticos com código. Nos demais, use julgamento com evidências do trace e dos artefatos. Leia também os resultados qualitativos: uma média pode esconder uma falha crítica.
+- Toda tentativa entra na taxa de sucesso e no custo, inclusive timeout e falha do CLI. Reporte o custo por tentativa e por sucesso. Se a skill custar bem mais que o braço sem skill, compare também com o braço sem skill repetido no mesmo orçamento.
+- Antes de editar uma skill por causa de uma falha, compare o trace que falhou com um que passou e registre onde a falha nasceu: skill, ferramenta, fixture, grader ou limite do modelo. Só a primeira causa justifica mudar a skill.
 - Guarde relatórios, traces e saídas por iteração fora dos arquivos da skill. Registre versão do avaliador, referência da skill, casos, configuração, critérios aprovados/reprovados e tempo, tokens ou custo quando efetivamente medidos. Não invente métricas ausentes.
 - Corrija a skill a partir das falhas observadas e repita os casos afetados e os de regressão. Não afrouxe critérios para fazer uma revisão passar. Casos sem poder de distinguir comportamentos devem ser revistos de forma explícita.
 - Antes de declarar a mudança validada, confira os artefatos, os critérios críticos e as regressões. Declare o alcance da evidência e tudo que não foi executado; não atribua ganho à skill sem comparação que o sustente.

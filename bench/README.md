@@ -8,6 +8,7 @@ Requisitos: Python 3.13+, git, e os CLIs dos braços que você for rodar (`codex
 # 1. Fixtures sintéticas (repositórios git em bench/fixtures/)
 py -I bench/build_fixtures.py bench/fixtures
 py -I bench/build_fixtures2.py bench/fixtures
+py -I bench/build_fixtures_reserva.py bench/fixtures   # lote reservado do experimento A
 git clone -q bench/fixtures/join-duplica.bundle bench/fixtures/join-duplica
 git -C bench/fixtures/join-duplica checkout -q -b main origin/main
 git -C bench/fixtures/join-duplica checkout -q receita-com-regiao
@@ -16,6 +17,8 @@ git -C bench/fixtures/join-duplica checkout -q receita-com-regiao
 py -I bench/expA/run_expA.py bench/expA/results --attempts 2 --arms astra-max,neon-xhigh,opus-max
 py -I bench/expA/grade_expA.py bench/expA/results sonnet
 py -I bench/expA/grade_expA.py bench/expA/results sol
+# Lote reservado: só com a versão candidata congelada, depois do lote de desenvolvimento
+py -I bench/expA/run_expA.py bench/expA/results --set reserva --attempts 3 --arms astra-max,neon-xhigh
 
 # 3. Experimento B: fluxo com e sem skill (Claude Code como agente substituto do Devin)
 py -I bench/expB/run_expB.py bench/expB/results --attempts 2
@@ -24,6 +27,14 @@ py -I bench/expB/grade_expB.py bench/expB/results
 # 4. Tabelas e gráficos
 uv run --with matplotlib python -I bench/analyze.py bench docs
 ```
+
+Testes dos graders, da agregação e do `conferir.py`, sem rede nem agentes:
+
+```sh
+py -I -B -m unittest discover -s bench -p "test_*.py"
+```
+
+As cópias de cada execução ficam em `<temp>/pipe-bench-runs/` (ou em `BENCH_RUNS`, que precisa estar fora do repositório), para o agente avaliado não alcançar o gabarito nem os graders. O `analyze.py` conta timeouts e falhas do CLI como erro, no denominador e no custo, e separa o lote reservado (`case_set`) do de desenvolvimento.
 
 Não reconstrua as fixtures com execuções em andamento: os SHAs mudam e os gabaritos da segunda rodada deixam de valer.
 

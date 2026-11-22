@@ -110,7 +110,7 @@ def plot_rubric():
 
 
 def plot_reviewer():
-    rows = {row["arm"]: row for row in read_csv("expA_summary.csv")}
+    rows = {row["arm"]: row for row in read_csv("expA_summary.csv") if row.get("case_set", "dev") == "dev"}
     arms = ("astra-max", "upstream-astra-max", "neon-xhigh", "upstream-neon-xhigh")
     labels = (
         "GPT-6.2 Astra / daqui", "GPT-6.2 Astra / original",

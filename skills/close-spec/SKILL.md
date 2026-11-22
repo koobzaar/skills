@@ -22,7 +22,7 @@ Reporte o caminho do spec, a branch, o alvo, a worktree e os SHAs aprovados. O r
 
 ## Conferir o que foi aprovado
 
-O veredito vale apenas para os SHAs que o revisor julgou (branch e alvo). Imediatamente antes do squash, compare `git rev-parse <branch>` e `git rev-parse <target>` com eles. Se qualquer um mudou (commit novo, rebase, alvo que avançou), ou se o veredito não for pronto, não faça merge: rode as checagens do spec no HEAD atual, peça nova revisão do que mudou e avise o usuário. Isso vale mesmo com permissão prévia para fechar, porque essa permissão foi dada para o que foi revisado.
+O veredito vale apenas para os SHAs que o revisor julgou (branch e alvo). Imediatamente antes do squash, rode `python conferir.py --repo . --branch <branch> --target <target> --branch-sha <SHA revisado> --target-sha <SHA revisado> --approved <referência aprovada> --worktree <worktree>`. O script fica ao lado deste arquivo: `.devin/skills/close-spec/conferir.py` no projeto, ou `~/.config/devin/skills/close-spec/conferir.py` (`%APPDATA%\devin\skills\close-spec\conferir.py` no Windows) na instalação global. Qualquer linha `FALHA` ou `ERRO` impede o squash; sem o script, compare `git rev-parse <branch>` e `git rev-parse <target>` com os SHAs revisados. Se qualquer um mudou (commit novo, rebase, alvo que avançou), ou se o veredito não for pronto, não faça merge: rode as checagens do spec no HEAD atual, peça nova revisão do que mudou e avise o usuário. Isso vale mesmo com permissão prévia para fechar, porque essa permissão foi dada para o que foi revisado.
 
 | Estado observado | Próxima ação |
 | --- | --- |

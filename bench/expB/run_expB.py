@@ -1,8 +1,10 @@
 """Experimento B: skill contra sem skill, com claude -p como agente substituto do Devin CLI.
 Uso: py -I run_expB.py <saida> [--attempts N] [--cases a,b]
 As skills do plugin são instaladas na cópia da fixture como .claude/skills/xp-<nome>, para não colidir
-com skills pessoais de mesmo nome. O braço sem skill recebe o mesmo pedido em linguagem natural."""
-import argparse, json, os, pathlib, re, shutil, stat, subprocess, threading, time
+com skills pessoais de mesmo nome. O braço sem skill recebe o mesmo pedido em linguagem natural.
+Cada cópia fica numa pasta temporária fora deste repositório (ou em BENCH_RUNS), e o claude carrega só as configurações
+do projeto temporário, sem MCP nem sessão salva, para não ver o gabarito nem herdar skills e regras do usuário."""
+import argparse, json, os, pathlib, re, shutil, stat, subprocess, tempfile, threading, time
 from concurrent.futures import ThreadPoolExecutor
 
 W = pathlib.Path(__file__).resolve().parents[1]
@@ -13,6 +15,9 @@ import hashlib
 NAMES = ["spec", "implement", "review", "close-spec"]
 SKILL_SHA = hashlib.sha256(b"".join((PLUGIN / "skills" / n / "SKILL.md").read_bytes() for n in ["spec", "implement", "review", "close-spec"])).hexdigest()[:12]
 fd, ff = S1["fechar-head-divergente-do-revisado"], S2["fechar-squash-feliz"]
+RUNS = pathlib.Path(os.environ.get("BENCH_RUNS") or tempfile.gettempdir()).resolve() / "pipe-bench-runs/expB"
+if RUNS.is_relative_to(PLUGIN):
+    raise SystemExit(f"BENCH_RUNS precisa ficar fora do repositório: {RUNS}")
 
 BRAIN = ("Planeje a mudança de receita por segmento. O financeiro vai usar o CSV de segmentos (relatorios/segmentos.csv) "
          "para decidir repasses. Some os valores decimais por segmento e arredonde só no fim, com ROUND_HALF_UP; um segmento "
@@ -62,6 +67,11 @@ def install(repo):
         f.write(".claude/\n")
 
 
+def child_env():
+    # Sem variáveis da sessão do Claude Code que lança o bench nem chaves de API; a autenticação vem do login do CLI.
+    return {k: v for k, v in os.environ.items() if not re.search(r"KEY|SECRET|TOKEN", k, re.I) and not k.startswith("CLAUDE")}
+
+
 LANE = threading.Semaphore(2)
 
 
@@ -71,7 +81,7 @@ def one(cid, arm, n, root):
     if (out / "meta.json").exists():
         return
     rmtree(out); out.mkdir(parents=True)
-    repo = W / "runs/expB" / cid / f"{arm}-{n}"
+    repo = RUNS / cid / f"{arm}-{n}"
     rmtree(repo); rmtree(repo.with_name(repo.name + "-remote.git")); repo.parent.mkdir(parents=True, exist_ok=True)
     shutil.copytree(W / "fixtures" / c["fixture"], repo)
     remote = W / "fixtures" / (c["fixture"] + "-remote.git")
@@ -81,12 +91,13 @@ def one(cid, arm, n, root):
     if arm == "with":
         install(repo)
     cmd = ["claude", "-p", "--model", "opus", "--output-format", "stream-json", "--verbose",
+           "--no-session-persistence", "--setting-sources", "project", "--strict-mcp-config",
            "--allowedTools", "Bash Read Edit Write Glob Grep Agent Skill", "--permission-mode", "acceptEdits"]
     with LANE:
         t0 = time.time()
         try:
             p = subprocess.run(cmd, cwd=repo, input=c[arm], capture_output=True, text=True, encoding="utf-8",
-                               errors="replace", timeout=3600)
+                               errors="replace", timeout=3600, env=child_env())
             so, se, rc = p.stdout, p.stderr, p.returncode
         except subprocess.TimeoutExpired as e:
             so, se, rc = e.stdout or "", "TIMEOUT", -9

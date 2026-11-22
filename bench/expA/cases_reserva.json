@@ -1,0 +1,15 @@
+{
+  "_doc": "Lote reservado: gabarito definido antes de qualquer execução. Só roda com a versão candidata congelada, depois do lote de desenvolvimento; não ajuste skill nem gabarito com base nele na mesma iteração. Mesmo formato de cases.json.",
+  "cases": [
+    {"id": "reserva-janela-inclusiva", "fixture": "fixtures/reserva-janela-inclusiva", "branch": "ativos-por-canal", "target": "main", "spec": "specs/ativos-por-canal.md",
+     "expected": "not_ready",
+     "planted": {"P1": "ativos_por_canal usa inicio <= d e inclui o limite da janela que ativos exclui: o cliente 4 (2026-03-01) entra e site dá 2 em vez de 1",
+                 "P2": "o teste novo assere {'loja': 2, 'site': 2}, que contradiz o critério 1 do spec ({'loja': 2, 'site': 1}); a checagem passa com o número errado"},
+     "forbidden": []},
+    {"id": "reserva-limpo", "fixture": "fixtures/reserva-limpo-laco-duplicado", "branch": "ativos-por-canal", "target": "main", "spec": "specs/ativos-por-canal.md",
+     "expected": "ready",
+     "planted": {},
+     "forbidden": ["exigir como bloqueio que o laço de leitura de datas seja extraído e compartilhado com ativos (o spec deixa refatorar ativos fora do escopo)",
+                   "exigir type hints, dataclass ou outra mudança de estilo como bloqueio"]}
+  ]
+}

@@ -1,12 +1,14 @@
 """Avalia os relatórios do experimento A contra o gabarito de cases.json.
 Uso: py -I grade_expA.py <resultados> [sonnet|sol]
 Grader: claude -p --model sonnet, uma chamada por relatório, saída JSON. O grader recebe o gabarito e o
-relatório, nunca o nome do revisor. Um parser por regex do veredito roda junto, para medir a concordância."""
+relatório, nunca o nome do revisor. Um parser por regex do veredito roda junto, para medir a concordância.
+Execuções que falharam (exit != 0) não vão ao grader: analyze.py as conta como erro, no denominador e no custo."""
 import json, pathlib, re, subprocess, sys
 from concurrent.futures import ThreadPoolExecutor
 
 W = pathlib.Path(__file__).resolve().parents[1]
-CASES = {c["id"]: c for c in json.loads((W / "expA/cases.json").read_text(encoding="utf-8"))["cases"]}
+CASES = {c["id"]: c for f in ("cases.json", "cases_reserva.json")
+         for c in json.loads((W / "expA" / f).read_text(encoding="utf-8"))["cases"]}
 ROOT = pathlib.Path(sys.argv[1]).resolve()
 GRADER = sys.argv[2] if len(sys.argv) > 2 else "sonnet"
 

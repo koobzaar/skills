@@ -40,7 +40,7 @@ Quando achados voltam para a mesma área depois de uma correção, pare de empil
 
 ## Portão
 
-Não faça merge nem push; isso pertence a `close-spec`. O veredito só é pronto com todos os critérios passando no HEAD atual, nenhum teste flaky sem causa encontrada, nenhum bloqueio aberto e os SHAs da branch e do alvo coincidindo com os da última revisão. Relate, nesta ordem, porque `close-spec` pode rodar em outra sessão e depende disso:
+Não faça merge nem push; isso pertence a `close-spec`. O veredito só é pronto com todos os critérios passando no HEAD atual, nenhum teste flaky sem causa encontrada, nenhum bloqueio aberto e os SHAs da branch e do alvo coincidindo com os da última revisão. Antes de relatar pronto, rode o `conferir.py` da skill `close-spec` com os SHAs da última revisão, a referência aprovada e a worktree (`python <pasta das skills>/close-spec/conferir.py --help`); qualquer linha `FALHA` ou `ERRO` torna o veredito não pronto, com o motivo no relatório. Relate, nesta ordem, porque `close-spec` pode rodar em outra sessão e depende disso:
 
 1. O veredito e o risco final (o do spec, ou o que o revisor elevou).
 2. Spec, referência aprovada, worktree, branch e alvo.

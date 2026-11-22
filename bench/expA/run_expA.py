@@ -1,14 +1,18 @@
 """Experimento A: qualidade e custo de revisores.
 Uso: py -I run_expA.py <saida> [--attempts N] [--arms a,b] [--cases x,y]
-Cada execução recebe uma cópia limpa da fixture. Nada é escrito nas fixtures originais."""
-import argparse, json, os, pathlib, re, shutil, stat, subprocess, sys, threading, time
+Cada execução recebe uma cópia limpa da fixture numa pasta temporária fora deste repositório (ou em BENCH_RUNS), para o
+agente não alcançar o gabarito, os graders nem os resultados de outras execuções. Nada é escrito nas fixtures originais.
+--set reserva roda o lote reservado (cases_reserva.json), que só se executa com a versão candidata congelada."""
+import argparse, json, os, pathlib, re, shutil, stat, subprocess, sys, tempfile, threading, time
 from concurrent.futures import ThreadPoolExecutor
 
 W = pathlib.Path(__file__).resolve().parents[1]
 SKILL = pathlib.Path(__file__).resolve().parents[2] / "skills/review/SKILL.md"
 UPSTREAM = W / "upstream/review/SKILL.md"
-CASES = json.loads((W / "expA/cases.json").read_text(encoding="utf-8"))["cases"]
 SHAS = json.loads((W / "fixtures/shas.json").read_text(encoding="utf-8"))
+RUNS = pathlib.Path(os.environ.get("BENCH_RUNS") or tempfile.gettempdir()).resolve() / "pipe-bench-runs/expA"
+if RUNS.is_relative_to(W.parent):
+    raise SystemExit(f"BENCH_RUNS precisa ficar fora do repositório: {RUNS}")
 
 ROUND2 = ("previous round: branch SHA {r1}, target SHA {target}; findings: (1) blocker: the status filter dropped orders without counting them "
           "-> fixed in {r2}; (2) in scope: replace the dict of dropped counts with a dataclass -> dismissed: the spec "
@@ -50,11 +54,16 @@ def brief_upstream(case, repo):
             f"There is no issue tracker: the specification is the file `{case['spec']}`. Read it instead of an issue.")
 
 
-def run(cmd, cwd, stdin_text, timeout):
+def child_env():
+    # Sem variáveis da sessão do Claude Code que lança o bench nem chaves de API; a autenticação vem do login do CLI.
+    return {k: v for k, v in os.environ.items() if not re.search(r"KEY|SECRET|TOKEN", k, re.I) and not k.startswith("CLAUDE")}
+
+
+def run(cmd, cwd, stdin_text, timeout, env=None):
     t0 = time.time()
     try:
         p = subprocess.run(cmd, cwd=cwd, input=stdin_text, capture_output=True, text=True, encoding="utf-8",
-                           errors="replace", timeout=timeout)
+                           errors="replace", timeout=timeout, env=env)
         return p.returncode, p.stdout, p.stderr, time.time() - t0
     except subprocess.TimeoutExpired as e:
         return -9, e.stdout or "", f"TIMEOUT after {timeout}s", time.time() - t0
@@ -95,8 +104,9 @@ def arm_neon(brief, repo, out):
 
 def arm_claude(brief, repo, out):
     cmd = ["claude", "-p", "--model", "opus", "--effort", "max", "--output-format", "json",
+           "--no-session-persistence", "--setting-sources", "project", "--strict-mcp-config",
            "--allowedTools", "Bash Read Glob Grep", "--disallowedTools", "Edit Write Agent Skill"]
-    rc, so, se, dt = run(cmd, repo, brief, 3600)
+    rc, so, se, dt = run(cmd, repo, brief, 3600, child_env())
     (out / "raw.json").write_text(so, encoding="utf-8"); (out / "stderr.txt").write_text(se, encoding="utf-8")
     try:
         d = json.loads(so)
@@ -134,7 +144,7 @@ def one(case, arm, n, root):
     if (out / "meta.json").exists():
         return
     rmtree(out); out.mkdir(parents=True)
-    repo = W / "runs/expA" / case["id"] / f"{arm}-{n}"
+    repo = RUNS / case["id"] / f"{arm}-{n}"
     rmtree(repo); repo.parent.mkdir(parents=True, exist_ok=True)
     shutil.copytree(W / case["fixture"], repo)
     subprocess.run(["git", "switch", "--quiet", case["branch"]], cwd=repo, check=True)
@@ -146,7 +156,7 @@ def one(case, arm, n, root):
     status = git(repo, "status", "--porcelain")
     meta = {"case": case["id"], "arm": arm, "attempt": n, "exit": rc, "seconds": round(dt, 1), "usage": usage,
             "cost_usd_reported": cost, "repo_dirty": bool(status.strip()), "git_status": status[:500],
-            "brief_sha": __import__("hashlib").sha256(brief.encode()).hexdigest()[:12], "skill_sha": __import__("hashlib").sha256(SKILL.read_bytes()).hexdigest()[:12], "report_chars": len((out / "report.md").read_text(encoding="utf-8")) if (out / "report.md").exists() else 0}
+            "case_set": "reserva" if case["fixture"].startswith("fixtures/reserva-") else "dev", "brief_sha": __import__("hashlib").sha256(brief.encode()).hexdigest()[:12], "skill_sha": __import__("hashlib").sha256(SKILL.read_bytes()).hexdigest()[:12], "report_chars": len((out / "report.md").read_text(encoding="utf-8")) if (out / "report.md").exists() else 0}
     (out / "meta.json").write_text(json.dumps(meta, indent=2), encoding="utf-8")
     print(case["id"], arm, n, rc, round(dt), flush=True)
 
@@ -155,7 +165,9 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("out"); ap.add_argument("--attempts", type=int, default=2)
     ap.add_argument("--arms", default=",".join(ARMS)); ap.add_argument("--cases", default="")
+    ap.add_argument("--set", choices=["dev", "reserva"], default="dev")
     a = ap.parse_args()
+    CASES = json.loads((W / ("expA/cases.json" if a.set == "dev" else "expA/cases_reserva.json")).read_text(encoding="utf-8"))["cases"]
     root = pathlib.Path(a.out).resolve(); root.mkdir(parents=True, exist_ok=True)
     cases = [c for c in CASES if not a.cases or c["id"] in a.cases.split(",")]
     jobs = [(c, arm, n) for n in range(1, a.attempts + 1) for c in cases for arm in a.arms.split(",")]
