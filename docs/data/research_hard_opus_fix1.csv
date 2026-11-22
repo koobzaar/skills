@@ -1,0 +1,5 @@
+case,arm,attempt,criterion,pass,detail,model,effort,skill_sha,seconds,input_tokens,cache_read_tokens,output_tokens,cost_usd,exit
+cliente-por-pistas,with,1,sem_busca_antes_do_ok,1,0 chamadas de busca; 0 papers no registro,claude-opus-5-5,medium,ac45777c26bf,15.1,4,36030,1199,0.101498,0
+cliente-por-pistas,with,1,pede_ok,1,pede confirmação,claude-opus-5-5,medium,ac45777c26bf,15.1,4,36030,1199,0.101498,0
+cliente-por-pistas,with,1,queries_sem_cliente,1,com identificador do cliente: nenhuma,claude-opus-5-5,medium,ac45777c26bf,15.1,4,36030,1199,0.101498,0
+cliente-por-pistas,with,1,isolamento,1,fora do corpus: nada,claude-opus-5-5,medium,ac45777c26bf,15.1,4,36030,1199,0.101498,0

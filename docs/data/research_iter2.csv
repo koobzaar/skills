@@ -1,0 +1,9 @@
+case,arm,attempt,criterion,pass,detail,model,effort,skill_sha,seconds,input_tokens,output_tokens,exit
+ja-feito,with,1,usou_busca,1,16 chamadas de busca,gpt-6.2-sol,medium,312842a644c8,240.4,927474,6059,0
+ja-feito,with,1,veredito,1,veredito esperado presente,gpt-6.2-sol,medium,312842a644c8,240.4,927474,6059,0
+ja-feito,with,1,evidencia_do_gabarito,1,"DOIs do gabarito citados: ['10.1093/pubmed/fdaa193', '10.1093/pubmed/fdab161', '10.28951/bjb.v41i3.626', '10.1016/j.puhe.2021.05.010']",gpt-6.2-sol,medium,312842a644c8,240.4,927474,6059,0
+ja-feito,with,1,sem_doi_inventado,1,9 DOIs; fora do corpus: nenhum,gpt-6.2-sol,medium,312842a644c8,240.4,927474,6059,0
+ja-feito,with,1,trechos_literais,1,13/13 trechos literais,gpt-6.2-sol,medium,312842a644c8,240.4,927474,6059,0
+ja-feito,with,1,isolamento,1,0 buscas web nativas,gpt-6.2-sol,medium,312842a644c8,240.4,927474,6059,0
+positivo-novidade,with,1,acionamento,1,leu o SKILL.md: True; esperado: True,gpt-6.2-sol,medium,312842a644c8,161.0,718702,4769,0
+positivo-novidade,with,1,isolamento,1,0 buscas web nativas,gpt-6.2-sol,medium,312842a644c8,161.0,718702,4769,0
