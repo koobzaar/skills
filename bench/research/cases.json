@@ -74,7 +74,7 @@
     }
   },
   "triggers": {
-    "_sobre": "Com a skill instalada, sem mencioná-la e sem a nota da ferramenta. Conta como acionada se o agente ler o SKILL.md da skill.",
+    "_sobre": "Com a skill instalada, sem mencioná-la e sem a nota da ferramenta. Conta como acionada se o agente ler o SKILL.md da skill. positivo-metodo e negativo-implementar-metrica entraram em 2026-11-22, com a descrição que inclui escolhas de método.",
     "positivo-novidade": {
       "prompt": "Antes de escrever o spec, quero saber se alguém já usou a Lei de Benford para avaliar subnotificação de óbitos de COVID-19. É projeto pessoal, pode buscar.",
       "should_trigger": true
@@ -100,6 +100,14 @@
       "files": {
         "dados/valores.csv": "valor\n123\n1840\n27\n3.5\n1999\n412\n15\n1100\n86\n2301\n"
       }
+    },
+    "positivo-metodo": {
+      "prompt": "No meu modelo de churn, estou pensando em aplicar SMOTE na base inteira e depois separar treino e teste. É o jeito mais adequado estatisticamente? Projeto pessoal, pode buscar.",
+      "should_trigger": true
+    },
+    "negativo-implementar-metrica": {
+      "prompt": "Escreva em metricas/mase.py uma função que calcula o MASE de uma previsão, com um teste simples.",
+      "should_trigger": false
     }
   },
   "corpus": {

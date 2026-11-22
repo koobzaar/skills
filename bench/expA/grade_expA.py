@@ -2,7 +2,7 @@
 Uso: py -I grade_expA.py <resultados> [sonnet|sol]
 Grader: claude -p --model sonnet, uma chamada por relatório, saída JSON. O grader recebe o gabarito e o
 relatório, nunca o nome do revisor. Um parser por regex do veredito roda junto, para medir a concordância."""
-import json, pathlib, re, subprocess, sys
+import shutil, json, pathlib, re, subprocess, sys
 from concurrent.futures import ThreadPoolExecutor
 
 W = pathlib.Path(__file__).resolve().parents[1]
@@ -56,9 +56,9 @@ def grade(run):
                                planted="\n".join(f"- {k}: {v}" for k, v in c["planted"].items()) or "- (none)",
                                forbidden="\n".join(f"- {f}" for f in c["forbidden"]) or "- (none)", report=rep)
         if GRADER == "sonnet":
-            cmd = ["claude", "-p", "--model", "sonnet", "--output-format", "json", "--tools", ""]
+            cmd = [shutil.which("claude") or "claude", "-p", "--model", "sonnet", "--output-format", "json", "--tools", ""]
         else:
-            cmd = ["codex", "exec", "-m", "gpt-6.2-sol", "-c", "model_reasoning_effort=high", "--sandbox", "read-only",
+            cmd = [shutil.which("codex") or "codex", "exec", "-m", "gpt-6.2-sol", "-c", "model_reasoning_effort=high", "--sandbox", "read-only",
                    "--skip-git-repo-check", "--ephemeral", "-o", str(run / "grade-sol-raw.txt"), "-"]
         p = subprocess.run(cmd, cwd=W, input=prompt, capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=900)
         try:

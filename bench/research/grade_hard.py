@@ -81,6 +81,9 @@ def grade(e, run, corpus, by_doi):
         lines = [l for l in text.splitlines() if re.search(f["line_regex"], l, re.I)]
         ok = [l for l in lines if re.search(f["flag_regex"], l, re.I)]
         res[f["name"]] = (bool(ok), f"{len(ok)}/{len(lines)} linhas")
+    for f in e.get("not_flags", []):  # o que não pode aparecer, como contestar uma escolha adequada
+        bad = [l for l in text.splitlines() if re.search(f["line_regex"], l, re.I) and re.search(f["flag_regex"], l, re.I)]
+        res[f["name"]] = (not bad, f"{len(bad)} linhas proibidas" + (f": {bad[0][:80]}" if bad else ""))
     res["sem_doi_inventado"] = check_dois(text, by_doi)
     res["trechos_literais"] = check_quotes(paper_quotes_only(text, run), corpus, by_doi)
     return res

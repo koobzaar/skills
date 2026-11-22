@@ -17,11 +17,13 @@ __pycache__/
 bench/fixtures/*
 !bench/fixtures/*.bundle
 bench/runs/
-bench/expA/results/
+bench/expA/results*/
+bench/expA/*.log
 bench/expB/results*/
 
 # Bench da skill research: corpus com resumos e trechos (refeito por build_corpus.py)
 bench/research/corpus.jsonl
 bench/research/hard/corpus.jsonl
+bench/research/metodo/corpus.jsonl
 bench/research/results/
 bench/research/*.log

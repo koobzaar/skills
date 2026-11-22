@@ -1,0 +1,81 @@
+{
+  "_sobre": "Casos da pergunta 'este é o método mais adequado, estatística e matematicamente, para o problema?'. Escritos pelo Claude (Opus 5.5) a partir de armadilhas metodológicas documentadas. Cada caso acumula várias escolhas; um caso de controle tem escolha adequada, para pegar contestação indevida. Os DOIs do gabarito e os trechos que sustentam o veredito foram conferidos no OpenAlex e na Semantic Scholar em 2026-11-22, antes das execuções.",
+  "tool_note": "Para buscar literatura, use `python tools/lit.py` (veja `python tools/lit.py --help`). Nesta máquina a ferramenta lê um corpus local.",
+  "cases": {
+    "modelo-demanda": {
+      "prompt": "Projeto pessoal, pode buscar. Estou desenhando um modelo para prever as vendas diárias de cada loja de uma rede pequena. O plano está em notas/plano.md. Antes de implementar, quero saber se esse é o jeito mais adequado estatisticamente de fazer cada parte, e o que trocar se não for.",
+      "files": {
+        "notas/plano.md": "# Previsão de vendas diárias por loja\n\n- Modelo: regressão linear em log(vendas + 1), com dia da semana, feriado e preço. A previsão em reais é exp(previsão) - 1.\n- Validação: KFold com 5 dobras e shuffle=True sobre os dois anos de histórico diário.\n- Métrica para escolher o modelo: MAPE médio entre as lojas. Algumas lojas têm dias com venda zero.\n"
+      },
+      "expect": {
+        "verdict_regex": "alternativa melhor|contestad|n[aã]o [ée] (o )?(mais )?adequad|inadequad|trocar|substitu",
+        "must_cite": [["10.1080/01621459.1983.10478017"], ["10.1016/j.ijforecast.2006.03.001"], ["10.1016/j.ins.2011.12.028", "10.1016/j.csda.2017.11.003", "10.1016/j.patter.2023.100804"]],
+        "flags": [
+          {"name": "vies_retransformacao", "line_regex": "exp\\(|retransform|escala original|smearing|Duan", "flag_regex": "vi[eé]s|bias|smearing|Duan|subestim|corre[çc]"},
+          {"name": "validacao_temporal", "line_regex": "kfold|k-fold|shuffle|valida[çc][aã]o cruzada|cross-validation", "flag_regex": "tempor|vazament|leak|futuro|ordem|rolling|expanding|origem m[oó]vel|bloco"},
+          {"name": "mape_com_zero", "line_regex": "MAPE", "flag_regex": "zero|indefinid|infinit|undefined|degener|MASE"}
+        ],
+        "fonte": "Duan (1983): o smearing estimate é 'a nonparametric estimate of the expected response on the untransformed scale'. Hyndman e Koehler (2006): muitas medidas 'are degenerate in commonly occurring situations'; propõem o MASE. Validação com dobras aleatórias em série temporal: Bergmeir e Benítez (2012), Bergmeir et al. (2018) e o vazamento temporal da taxonomia de Kapoor e Narayanan (2023)."
+      }
+    },
+    "script-fraude": {
+      "prompt": "Projeto pessoal, pode buscar. O script treino/treinar.py treina meu classificador de transações fraudulentas (cerca de 1% de fraudes). Antes de seguir, confira se as escolhas estatísticas do script são as mais adequadas e o que a literatura recomenda no lugar.",
+      "files": {
+        "treino/treinar.py": "import pandas as pd\nfrom imblearn.over_sampling import SMOTE\nfrom sklearn.feature_selection import SelectKBest, f_classif\nfrom sklearn.linear_model import LogisticRegression\nfrom sklearn.metrics import accuracy_score, roc_auc_score\nfrom sklearn.model_selection import cross_val_score, train_test_split\n\ndf = pd.read_csv(\"dados/transacoes.csv\")\nX, y = df.drop(columns=[\"fraude\"]), df[\"fraude\"]  # cerca de 1% de fraudes\n\n# balanceia antes de separar treino e teste\nX, y = SMOTE(random_state=0).fit_resample(X, y)\n\n# escolhe as 20 melhores variáveis com todos os dados\nX = SelectKBest(f_classif, k=20).fit_transform(X, y)\n\nX_tr, X_te, y_tr, y_te = train_test_split(X, y, test_size=0.2, random_state=0)\nmodelo = LogisticRegression(max_iter=1000).fit(X_tr, y_tr)\nprint(\"CV:\", cross_val_score(LogisticRegression(max_iter=1000), X, y, cv=5).mean())\nprint(\"acurácia:\", accuracy_score(y_te, modelo.predict(X_te)))\nprint(\"AUC ROC:\", roc_auc_score(y_te, modelo.predict_proba(X_te)[:, 1]))\n"
+      },
+      "expect": {
+        "verdict_regex": "alternativa melhor|contestad|n[aã]o [ée] (o )?(mais )?adequad|inadequad|trocar|substitu|vazament|leak",
+        "must_cite": [["10.1016/j.patter.2023.100804", "10.1109/MCI.2018.2866730"], ["10.1073/pnas.102102699"], ["10.1371/journal.pone.0118432"]],
+        "flags": [
+          {"name": "smote_antes_do_split", "line_regex": "SMOTE|oversampl|sobreamostr|balance", "flag_regex": "vazament|leak|antes d[eo] (split|separ|dividir)|s[oó] no treino|dentro d[ao] (dobra|valida|pipeline)|otimist"},
+          {"name": "selecao_com_todos_os_dados", "line_regex": "SelectKBest|sele[çc][aã]o de (vari[aá]veis|features|atributos)|feature selection", "flag_regex": "vi[eé]s de sele|selection bias|vazament|leak|dentro d[ao] (dobra|valida|pipeline)|external|externa|otimist"},
+          {"name": "metrica_desbalanceada", "line_regex": "acur[aá]cia|accuracy|ROC", "flag_regex": "precis[aã]o.{0,20}(recall|revoca)|precision.{0,10}recall|PR[- ]?AUC|PRC|average precision|desbalance|imbalanc|enganos|mislead"}
+        ],
+        "fonte": "Kapoor e Narayanan (2023): taxonomia de 'eight types of leakage', com conclusões 'wildly overoptimistic'. Ambroise e McLachlan (2002): seleção de variáveis fora da validação cruzada gera 'selection bias'. Saito e Rehmsmeier (2015): em dados desbalanceados, ROC 'can be deceptive' e 'PRC plots ... can provide ... an accurate prediction'."
+      }
+    },
+    "escolha-adequada": {
+      "prompt": "Projeto pessoal, pode buscar. Num teste A/B do meu app, comparo 20 métricas entre os grupos e quero limitar a proporção de falsos positivos entre as métricas que derem diferença. Vou aplicar Benjamini-Hochberg com FDR de 5%. Esse é um jeito adequado de tratar as comparações múltiplas?",
+      "expect": {
+        "verdict_regex": "adequad|sustentad|apropriad|faz sentido|[ée] (uma )?(boa|correta) escolha",
+        "must_cite": [["10.1111/j.2517-6161.1995.tb02031.x"]],
+        "not_flags": [
+          {"name": "nao_contesta_bh", "line_regex": "Benjamini|\\bBH\\b|FDR", "flag_regex": "inadequad|n[aã]o (é|seja) adequad|n[aã]o use|evite|n[aã]o se sustenta"}
+        ],
+        "fonte": "Benjamini e Hochberg (1995): controlar a 'false discovery rate' tem 'potential for a gain in power' quando o objetivo é a proporção de falsas rejeições. A ressalva sobre dependência entre as métricas é bem-vinda e não conta como contestação."
+      }
+    }
+  },
+  "corpus": {
+    "_sobre": "Queries que montam o corpus local: os métodos dos casos, suas críticas e alternativas, e distratores próximos.",
+    "queries": [
+      "retransformation bias log linear regression prediction original scale",
+      "smearing estimate retransformation",
+      "cross-validation time series forecasting evaluation",
+      "k-fold cross-validation autoregressive time series validity",
+      "measures of forecast accuracy MAPE zero values",
+      "mean absolute scaled error forecast accuracy",
+      "retail sales demand forecasting daily store",
+      "data leakage machine learning reproducibility",
+      "oversampling SMOTE cross-validation overoptimistic",
+      "SMOTE synthetic minority oversampling imbalanced classification",
+      "selection bias feature selection cross-validation",
+      "precision recall versus ROC imbalanced datasets",
+      "evaluation metrics imbalanced classification fraud detection",
+      "false discovery rate multiple testing Benjamini Hochberg",
+      "false discovery rate under dependency",
+      "multiple comparisons online controlled experiments A/B testing"
+    ],
+    "required_dois": [
+      "10.1080/01621459.1983.10478017", "10.1016/j.ins.2011.12.028", "10.1016/j.csda.2017.11.003", "10.1016/j.ijforecast.2006.03.001",
+      "10.1016/j.patter.2023.100804", "10.1109/MCI.2018.2866730", "10.1073/pnas.102102699", "10.1371/journal.pone.0118432",
+      "10.1111/j.2517-6161.1995.tb02031.x"
+    ],
+    "snippet_queries": {
+      "10.1016/j.ins.2011.12.028": "cross-validation time series dependence blocked evaluation",
+      "10.1016/j.csda.2017.11.003": "k-fold cross-validation autoregressive models valid",
+      "10.1016/j.patter.2023.100804": "temporal leakage training data test data preprocessing",
+      "10.1109/MCI.2018.2866730": "oversampling before cross-validation overoptimistic"
+    }
+  }
+}

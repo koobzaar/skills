@@ -61,7 +61,7 @@ def run(cmd, cwd, stdin_text, timeout):
 
 
 def arm_astra(brief, repo, out):
-    cmd = ["codex", "exec", "-m", "gpt-6.2-astra", "-c", "model_reasoning_effort=max", "--sandbox", "read-only",
+    cmd = [shutil.which("codex") or "codex", "exec", "-m", "gpt-6.2-astra", "-c", "model_reasoning_effort=max", "--sandbox", "read-only",
            "--skip-git-repo-check", "--ephemeral", "--json", "-C", str(repo), "-o", str(out / "report.md"), "-"]
     rc, so, se, dt = run(cmd, repo, brief, 3600)
     (out / "events.jsonl").write_text(so, encoding="utf-8"); (out / "stderr.txt").write_text(se, encoding="utf-8")
@@ -80,7 +80,7 @@ def arm_astra(brief, repo, out):
 
 
 def arm_neon(brief, repo, out):
-    cmd = ["agy", "-p", brief, "--model", "gemini-4-neon-xhigh", "--output-format", "json", "--print-timeout", "55m"]
+    cmd = [shutil.which("agy") or "agy", "-p", brief, "--model", "gemini-4-neon-xhigh", "--output-format", "json", "--print-timeout", "55m"]
     rc, so, se, dt = run(cmd, repo, "", 3600)
     (out / "raw.json").write_text(so, encoding="utf-8"); (out / "stderr.txt").write_text(se, encoding="utf-8")
     try:
@@ -94,7 +94,7 @@ def arm_neon(brief, repo, out):
 
 
 def arm_claude(brief, repo, out):
-    cmd = ["claude", "-p", "--model", "opus", "--effort", "max", "--output-format", "json",
+    cmd = [shutil.which("claude") or "claude", "-p", "--model", "opus", "--effort", "max", "--output-format", "json",
            "--allowedTools", "Bash Read Glob Grep", "--disallowedTools", "Edit Write Agent Skill"]
     rc, so, se, dt = run(cmd, repo, brief, 3600)
     (out / "raw.json").write_text(so, encoding="utf-8"); (out / "stderr.txt").write_text(se, encoding="utf-8")

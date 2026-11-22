@@ -41,7 +41,7 @@ def discover():
         recs += rs
     have = {i for r in recs for i in r["ids"]}
     for d in required_dois():
-        if "doi:" + d not in have:
+        if "doi:" + d.lower() not in have:
             recs.append(lit.online_get("doi:" + d))
     recs = lit.merge_all(recs)
     ids = [next((i for i in r["ids"] if i.startswith("doi:")), r["ids"][0]) for r in recs if r["ids"]]
@@ -90,7 +90,7 @@ def main():
     use_set(pathlib.Path(a.set).resolve())
     recs = add_snippets(discover() if a.discover else rebuild())
     OUT.write_text("".join(json.dumps(r, ensure_ascii=False) + "\n" for r in recs), encoding="utf-8")
-    missing = [d for d in required_dois() if not any("doi:" + d in r["ids"] for r in recs)]
+    missing = [d for d in required_dois() if not any("doi:" + d.lower() in r["ids"] for r in recs)]
     print(f"{len(recs)} papers em {OUT.name}; DOIs do gabarito ausentes: {missing or 'nenhum'}")
     return 1 if missing else 0
 
