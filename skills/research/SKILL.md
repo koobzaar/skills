@@ -18,7 +18,7 @@ Use apenas papers obtidos pelo `lit.py`, que fica ao lado deste arquivo: `.devin
 
 Quebre a ideia em afirmações verificáveis: o que ela supõe ser novo, cada premissa da qual depende e o resultado que espera. Para cada afirmação, escreva queries que busquem o que a confirma, o que a contradiz (crítica, limitação, replicação que falhou) e trabalho anterior com a mesma técnica ou o mesmo dado.
 
-A busca envia as queries a serviços externos. Antes da primeira chamada, mostre as queries ao usuário. Se a ideia for de trabalho, ou se não estiver claro, espere o ok. Use termos genéricos do domínio, sem nome de cliente, dado interno ou detalhe que identifique o projeto.
+A busca envia as queries a serviços externos. Antes da primeira chamada, mostre as queries ao usuário. Se a ideia for de trabalho, ou se não estiver claro, pare e espere o ok a essas queries: aprovação do projeto ou pedido para começar logo não substituem esse ok. Use termos genéricos do domínio, sem nome de cliente, dado interno ou detalhe que identifique o projeto.
 
 Se a nota do usuário citar papers, resolva cada um com `get`. O que não for encontrado fica como não localizado e nunca vira evidência.
 
