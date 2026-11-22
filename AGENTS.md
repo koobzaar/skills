@@ -2,7 +2,7 @@
 
 Este repositório mantém skills e subagentes do **Devin CLI** para o fluxo de spec, implementação, revisão e fechamento de mudanças em pipelines de dados, adaptados de [felipeam86/pipe-skills](https://github.com/felipeam86/pipe-skills). As skills ficam em `skills/<nome>/SKILL.md`, os subagentes em `agents/<nome>.md` e o benchmark em `bench/`. Não é um plugin: quem usa copia `skills/` e `agents/` para `.devin/` do projeto ou para a pasta global do Devin.
 
-Planejamento, edição e validação ficam na sessão principal. O agente `explorer` faz leituras extensas e delimitadas de código e dados; a skill `review` roda no subagente `reviewer`, que fixa um modelo de outro fornecedor e só lê. Não crie uma cadeia de subagentes para implementar os passos de um spec.
+Planejamento, edição e validação ficam na sessão principal. O agente `explorer` faz leituras extensas e delimitadas de código e dados; o `researcher`, as buscas de literatura da skill `research`; a skill `review` roda no subagente `reviewer`, que fixa um modelo de outro fornecedor e só lê. Não crie uma cadeia de subagentes para implementar os passos de um spec.
 
 ## Como trabalhar
 
