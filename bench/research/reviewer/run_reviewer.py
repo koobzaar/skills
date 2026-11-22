@@ -1,7 +1,7 @@
 """Mede o passo de revisão da skill research: um relatório cujos trechos passam no verify, com uma evidência
 (E2) literal que não sustenta a afirmação. O revisor deve marcar E2 como "não apoia" e não marcar E1 e E3.
 
-Uso: py -I -B bench/research/reviewer/run_reviewer.py <saida> [--attempts 1] [--model gemini-3.8-flash-medium]
+Uso: py -I -B bench/research/reviewer/run_reviewer.py <saida> [--attempts 1] [--model gemini-4-neon-medium]
 Precisa de bench/research/corpus.jsonl e do CLI agy autenticado."""
 import argparse, json, pathlib, re, shutil, subprocess, tempfile, time
 
@@ -36,7 +36,7 @@ def grade(text):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("out"); ap.add_argument("--attempts", type=int, default=1); ap.add_argument("--model", default="gemini-3.8-flash-medium")
+    ap.add_argument("out"); ap.add_argument("--attempts", type=int, default=1); ap.add_argument("--model", default="gemini-4-neon-medium")
     a = ap.parse_args()
     corpus = [json.loads(l) for l in (ROOT / "bench/research/corpus.jsonl").read_text(encoding="utf-8").splitlines() if l.strip()]
     prompt = profile_body() + "\n\n" + task()

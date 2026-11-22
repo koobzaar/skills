@@ -3,6 +3,7 @@
 Uso:
   py -I -B bench/research/build_corpus.py --discover   # roda as queries de cases.json e grava corpus_ids.txt
   py -I -B bench/research/build_corpus.py              # refaz o corpus a partir de corpus_ids.txt, em lotes
+  --set bench/research/hard                             # usa o cases.json, corpus_ids.txt e corpus.jsonl de outra pasta
 
 Precisa de rede e, para trechos e resumos da Elsevier, de S2_API_KEY ou SEMANTIC_API_KEY. O corpus (resumos e
 trechos) fica em bench/research/corpus.jsonl, fora do Git; a lista de IDs fica versionada."""
@@ -13,12 +14,17 @@ spec = importlib.util.spec_from_file_location("lit", HERE.parents[1] / "skills/r
 lit = importlib.util.module_from_spec(spec)
 sys.dont_write_bytecode = True
 spec.loader.exec_module(lit)
-CASES = json.loads((HERE / "cases.json").read_text(encoding="utf-8"))
-IDS, OUT = HERE / "corpus_ids.txt", HERE / "corpus.jsonl"
+CASES, IDS, OUT = None, None, None
+
+
+def use_set(d):
+    global CASES, IDS, OUT
+    CASES = json.loads((d / "cases.json").read_text(encoding="utf-8"))
+    IDS, OUT = d / "corpus_ids.txt", d / "corpus.jsonl"
 
 
 def required_dois():
-    out = set()
+    out = set(CASES["corpus"].get("required_dois", []))
     for c in CASES["cases"].values():
         e = c["expect"]
         out.update(e.get("required_any", []))
@@ -79,7 +85,9 @@ def add_snippets(recs):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--discover", action="store_true")
+    ap.add_argument("--set", default=str(HERE), help="pasta com cases.json; o corpus é gravado nela")
     a = ap.parse_args()
+    use_set(pathlib.Path(a.set).resolve())
     recs = add_snippets(discover() if a.discover else rebuild())
     OUT.write_text("".join(json.dumps(r, ensure_ascii=False) + "\n" for r in recs), encoding="utf-8")
     missing = [d for d in required_dois() if not any("doi:" + d in r["ids"] for r in recs)]

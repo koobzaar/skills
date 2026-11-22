@@ -75,3 +75,17 @@ py -I -B bench/research/reviewer/run_reviewer.py bench/research/results/reviewer
 ```
 
 `--original` corrige pelo gabarito anterior à revisão 1 (veja `_revisao_1` em `cases.json`). Uma execução com busca web nativa reprova no critério `isolamento`.
+
+### Casos adversariais
+
+Quatro casos com várias armadilhas cada, gerados por três modelos, em [research/hard/cases.json](research/hard/cases.json). Rodam no Claude Code ou no Codex, com o corpus próprio do conjunto:
+
+```powershell
+py -I -B bench/research/build_corpus.py --discover --set bench/research/hard
+# Claude Code: uma execução por vez; --probe lista o que o processo isolado carrega
+py -I -B bench/research/run_claude.py bench/research/results/probe --probe --model haiku --effort low --budget 0.5
+py -I -B bench/research/run_claude.py bench/research/results/hard-opus --set bench/research/hard --cases cliente-por-pistas --arms with,without
+# Codex
+py -I -B bench/research/run_research.py bench/research/results/hard-codex --set bench/research/hard --cases autocontrole,assinatura-retratada,doi-trocado,cliente-por-pistas
+py -I -B bench/research/grade_hard.py bench/research/results/hard-codex [--csv docs/data/research_hard_codex.csv]
+```

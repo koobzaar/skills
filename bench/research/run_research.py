@@ -3,6 +3,7 @@
 Uso:
   py -I -B bench/research/run_research.py <saida> --cases ja-feito,premissa-contradita --arms with,without [--attempts 1]
   py -I -B bench/research/run_research.py <saida> --triggers positivo-novidade,negativo-explicar
+  --set bench/research/hard   usa o cases.json e o corpus.jsonl de outra pasta
 
 As cópias rodam numa pasta temporária fora deste repositório, cada uma com git próprio, para o agente não ler o
 AGENTS.md daqui. Os dois braços recebem o mesmo tools/lit.py e o mesmo pedido; o braço com skill tem
@@ -90,7 +91,7 @@ def run_one(kind, cid, arm, n, root):
                 if isinstance(v, (int, float)):
                     usage[k] = usage.get(k, 0) + v
     meta = {"kind": kind, "case": cid, "arm": arm, "attempt": n, "exit": rc, "seconds": round(dt, 1), "usage": usage,
-            "model": MODEL, "effort": EFFORT, "skill_sha": SKILL_SHA, "corpus_papers": sum(1 for _ in CORPUS.open(encoding="utf-8"))}
+            "model": MODEL, "effort": EFFORT, "agent": "codex", "skill_sha": SKILL_SHA, "corpus_papers": sum(1 for _ in CORPUS.open(encoding="utf-8"))}
     (out / "meta.json").write_text(json.dumps(meta, indent=2), encoding="utf-8")
     print(kind, cid, arm, n, "rc", rc, f"{dt:.0f}s", usage, flush=True)
 
@@ -102,7 +103,11 @@ def main():
     ap.add_argument("--triggers", default="")
     ap.add_argument("--arms", default="with,without")
     ap.add_argument("--attempts", type=int, default=1)
+    ap.add_argument("--set", default=str(HERE))
     a = ap.parse_args()
+    global CASES, CORPUS
+    d = pathlib.Path(a.set).resolve()
+    CASES, CORPUS = json.loads((d / "cases.json").read_text(encoding="utf-8")), d / "corpus.jsonl"
     if not CORPUS.exists():
         raise SystemExit("corpus ausente: rode bench/research/build_corpus.py")
     root = pathlib.Path(a.out).resolve()
