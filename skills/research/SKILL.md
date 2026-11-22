@@ -54,7 +54,7 @@ Rode você mesmo `python lit.py verify research/<slug>.md`, mesmo que o `researc
 
 Depois peça ao subagente `reviewer` que leia o relatório e o registro e diga, para cada evidência, se o trecho sustenta a afirmação e o veredito: apoia, apoia em parte ou não apoia, com o motivo. Revise os vereditos que ele contestar. Se o subagente estiver indisponível, marque a revisão como pendente no relatório.
 
-Entregue o caminho do relatório, o veredito geral, as afirmações `já feito` ou `contestada`, o resultado do `verify` e o da revisão. O relatório pode servir de nota para `/spec`.
+Entregue o caminho do relatório, o veredito geral, as afirmações `já feito` ou `contestada`, o resultado do `verify` e o da revisão. Na resposta, cite os papers pelos IDs do registro, como no relatório, sem links ou papers de outra fonte. O relatório pode servir de nota para `/spec`.
 
 ## Exemplos
 
