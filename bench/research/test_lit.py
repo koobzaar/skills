@@ -1,6 +1,9 @@
 """Testes determinísticos do lit.py da skill research, sem rede.
 Uso: py -I -m unittest discover -s bench/research -p "test_*.py" -v"""
 import contextlib, importlib.util, io, json, os, pathlib, sys, tempfile, unittest
+from unittest import mock
+
+sys.dont_write_bytecode = True  # nada de __pycache__ dentro da pasta da skill
 
 ROOT = pathlib.Path(__file__).resolve().parents[2]
 spec = importlib.util.spec_from_file_location("lit", ROOT / "skills/research/lit.py")
@@ -47,7 +50,7 @@ class TestIds(unittest.TestCase):
         self.assertEqual(lit.norm_id("PMID:34000000"), "pmid:34000000")
 
     def test_id_invalido(self):
-        with self.assertRaises(SystemExit):
+        with self.assertRaises(lit.UsageError):
             lit.norm_id("Silva 2021")
 
     def test_faixa_de_ano(self):
@@ -128,6 +131,98 @@ class TestVerify(Base):
 
     def test_id_em_crase_nao_conta_como_evidencia(self):
         rc, out = self.verify('| `doi:10.9999/inventado` | não localizada |\n- [doi:10.5555/benford] "We test whether daily COVID-19 deaths follow Benford\'s law"\n')
+        self.assertEqual(rc, 0, out)
+
+
+ALPHA = {"id": "doi:10.5555/alpha", "ids": ["doi:10.5555/alpha", "pmid:100"], "title": "The treatment reduced",
+         "year": 2020, "authors": [], "venue": "", "abstract": "mortality in adults. The treatment reduced mortality in adults by a third.", "snippets": [], "sources": ["teste"]}
+
+
+class TestAchadosDaRevisao(Base):
+    """Achados da revisão do Codex sobre o commit 7a0815d: cada um era um falso OK ou um erro mal classificado."""
+
+    def write_reg(self, *recs):
+        lit.Registry(self.reg).add(list(recs))
+
+    def verify_text(self, text):
+        rep = self.tmp / "rel.md"
+        rep.write_text(text, encoding="utf-8")
+        return self.run_lit("verify", str(rep))
+
+    def test_1_id_com_espaco_nao_escapa(self):
+        self.write_reg(ALPHA)
+        rc, out = self.verify_text('[doi:10.5555/alpha] "The treatment reduced mortality in adults by a third"\n[doi: 10.9999/fake] "The treatment eradicated every known disease"\n')
+        self.assertEqual(rc, 1, out)
+
+    def test_1b_doi_solto_fora_do_formato_falha(self):
+        self.write_reg(ALPHA)
+        rc, out = self.verify_text('Segundo 10.9999/fake, "The treatment eradicated every known disease today"\n')
+        self.assertEqual(rc, 1, out)
+
+    def test_2_dois_dois_com_pmid_comum_nao_se_fundem(self):
+        beta = {**json.loads(json.dumps(ALPHA)), "id": "doi:10.5555/beta", "ids": ["doi:10.5555/beta", "pmid:100"],
+                "abstract": "The placebo improved survival in a completely unrelated pediatric trial with a long follow-up of many years"}
+        self.write_reg(ALPHA, beta)
+        rc, out = self.verify_text('[doi:10.5555/alpha] "The placebo improved survival in a completely unrelated pediatric trial"\n')
+        self.assertEqual(rc, 1, out)
+
+    def test_3_aspas_internas_falham(self):
+        self.write_reg(ALPHA)
+        rc, out = self.verify_text('[doi:10.5555/alpha] “The treatment reduced mortality in adults "despite the invented results" in both trials”\n')
+        self.assertEqual(rc, 1, out)
+        rc, out = self.verify_text('[doi:10.5555/alpha] "The treatment reduced mortality in adults "despite the invented results" in both trials"\n')
+        self.assertEqual(rc, 1, out)
+
+    def test_4_trecho_nao_e_reaproveitado(self):
+        self.write_reg(ALPHA)
+        rc, out = self.verify_text('[doi:10.5555/alpha] "The treatment reduced mortality in adults by a third"; [doi:10.5555/alpha] confirmed this result\n')
+        self.assertEqual(rc, 1, out)
+
+    def test_5_pontuacao_alterada_falha(self):
+        self.write_reg(ALPHA)
+        rc, out = self.verify_text('[doi:10.5555/alpha] "The treatment reduced mortality? In adults! by a third"\n')
+        self.assertEqual(rc, 1, out)
+
+    def test_6_trecho_nao_atravessa_campos(self):
+        rec = {**json.loads(json.dumps(ALPHA)), "abstract": "mortality in adults was the primary outcome of this cohort."}
+        self.write_reg(rec)
+        rc, out = self.verify_text('[doi:10.5555/alpha] "The treatment reduced mortality in adults was the primary outcome"\n')
+        self.assertEqual(rc, 1, out)
+
+    def test_7_colchete_extra_no_id_falha(self):
+        self.write_reg(ALPHA)
+        rc, out = self.verify_text('[doi:10.5555/alpha[] "The treatment reduced mortality in adults by a third"\n')
+        self.assertEqual(rc, 1, out)
+
+    def test_8_fonte_com_erro_nao_vira_nao_encontrado(self):
+        def fake(url, headers=None, s2=False):
+            if "semanticscholar" in url:
+                raise lit.ApiError("HTTP 503")
+            raise lit.NotFound(url)
+        with mock.patch.object(lit, "http_json", fake), mock.patch.dict(os.environ, {"S2_API_KEY": "x"}):
+            with self.assertRaises(lit.ApiError):
+                lit.online_get("doi:10.5555/alpha")
+
+    def test_9_timeout_vira_erro_tratado(self):
+        with mock.patch.object(lit.urllib.request, "urlopen", side_effect=TimeoutError("timed out")), mock.patch.object(lit.time, "sleep"):
+            with self.assertRaises(lit.ApiError):
+                lit.http_json("https://api.openalex.org/works")
+
+    def test_10_faixa_de_ano_invalida(self):
+        for bad in ["-", "20-21", "abc"]:
+            with self.assertRaises(lit.UsageError):
+                lit.parse_year(bad)
+        self.assertEqual(lit.parse_year("2020-"), (2020, None))
+
+    def test_retratado_nao_vale_como_evidencia(self):
+        self.write_reg({**json.loads(json.dumps(ALPHA)), "retracted": True})
+        rc, out = self.verify_text('[doi:10.5555/alpha] "The treatment reduced mortality in adults by a third"\n')
+        self.assertEqual(rc, 1, out)
+        self.assertIn("retratado", out)
+
+    def test_trecho_correto_continua_passando(self):
+        self.write_reg(ALPHA)
+        rc, out = self.verify_text('| A1 | sustentada | [doi:10.5555/alpha] “The treatment reduced mortality in adults by a third.” |\n')
         self.assertEqual(rc, 0, out)
 
 
