@@ -43,11 +43,14 @@ class UsageError(ValueError):
 _last_call = {}
 
 
-def http_json(url, headers=None, s2=False):
+def http_json(url, headers=None, s2=False, body=None):
     if not url.startswith("https://"):
         raise UsageError(f"só HTTPS: {url}")
     host = url.split("/")[2]
     h = {"User-Agent": UA, "Accept": "application/json", **(headers or {})}
+    data = None
+    if body is not None:
+        data, h["Content-Type"] = json.dumps(body).encode(), "application/json"
     delay = 2.0
     for attempt in range(5):
         wait = _last_call.get(host, 0) + 1.1 - time.time()  # 1 req/s por fonte: limite da S2 com chave e rajada do OpenAlex
@@ -55,7 +58,7 @@ def http_json(url, headers=None, s2=False):
             time.sleep(wait)
         _last_call[host] = time.time()
         try:
-            with urllib.request.urlopen(urllib.request.Request(url, headers=h), timeout=30) as r:  # nosec B310: URL https fixa
+            with urllib.request.urlopen(urllib.request.Request(url, data=data, headers=h), timeout=30) as r:  # nosec B310: URL https fixa
                 return json.load(r)
         except urllib.error.HTTPError as e:
             if e.code == 404:
@@ -366,6 +369,18 @@ def online_snippets(q, paper, limit):
         r = rec(ids, pp.get("title"), None, [a.get("name", "") if isinstance(a, dict) else str(a) for a in pp.get("authors") or []],
                 None, None, "semanticscholar", [{"text": sn.get("text", ""), "section": sn.get("section") or ""}])
         out.append((r, r["snippets"][0]))
+    # O snippet traz só o corpusId; sem o DOI, um trecho citado como [doi:...] não seria achado pelo verify.
+    cids = list(dict.fromkeys(i for r, _ in out for i in r["ids"]))
+    if cids:
+        try:
+            meta = http_json(f"{S2}/paper/batch?fields={S2_FIELDS}", s2_headers(), s2=True,
+                             body={"ids": [i.replace("s2:", "CorpusId:") for i in cids]})
+            full = {f"s2:{m.get('corpusId')}": from_s2(m) for m in meta if m}
+            for r, _ in out:
+                if r["ids"] and r["ids"][0] in full:
+                    merge(r, full[r["ids"][0]])
+        except (ApiError, NotFound) as e:
+            print(f"aviso: metadados dos trechos indisponíveis ({e}); os trechos ficam só com o ID s2:", file=sys.stderr)
     return out
 
 

@@ -220,6 +220,19 @@ class TestAchadosDaRevisao(Base):
         self.assertEqual(rc, 1, out)
         self.assertIn("retratado", out)
 
+    def test_trecho_da_s2_pode_ser_citado_pelo_doi(self):
+        snip = {"data": [{"paper": {"corpusId": 999, "title": "Benford and deaths", "authors": []},
+                          "snippet": {"text": "New deaths at the county level do not span sufficient orders of magnitude for the test.", "section": "Results"}}]}
+        meta = [{"corpusId": 999, "title": "Benford and deaths", "year": 2025, "externalIds": {"DOI": "10.5555/DEATHS", "CorpusId": 999},
+                 "authors": [], "abstract": "", "citationCount": 0, "publicationTypes": ["JournalArticle"]}]
+        def fake(url, headers=None, s2=False, body=None):
+            return meta if "/paper/batch" in url else snip
+        with mock.patch.object(lit, "http_json", fake):
+            hits = lit.online_snippets("deaths orders of magnitude", None, 3)
+        self.write_reg(*[r for r, _ in hits])
+        rc, out = self.verify_text('[doi:10.5555/deaths] "New deaths at the county level do not span sufficient orders of magnitude"\n')
+        self.assertEqual(rc, 0, out)
+
     def test_trecho_correto_continua_passando(self):
         self.write_reg(ALPHA)
         rc, out = self.verify_text('| A1 | sustentada | [doi:10.5555/alpha] “The treatment reduced mortality in adults by a third.” |\n')
