@@ -95,7 +95,43 @@ A revisão semântica não roda no Codex como no Devin. Em `citacao-falsa`, o ag
 
 ### Passo de revisão
 
-O [relatório de teste](../bench/research/reviewer/relatorio.md) tem três evidências literais, e uma delas não sustenta a afirmação. Com o perfil do `reviewer` e o pedido da skill, o Gemini 3.8 Flash no Antigravity marcou só essa como "não apoia" em uma tentativa (3/3).
+O [relatório de teste](../bench/research/reviewer/relatorio.md) tem três evidências literais, e uma delas não sustenta a afirmação. Com o perfil do `reviewer` e o pedido da skill, o Gemini 3.8 Flash no Antigravity marcou (o runner agora usa o Gemini 4 Neon, ainda não executado) só essa como "não apoia" em uma tentativa (3/3).
+
+### Casos adversariais
+
+Codex (`gpt-6.2-sol`, esforço `high`) e Gemini 3.8 Flash geraram seis casos difíceis cada, de forma independente, com o mesmo pedido. Depois, o Gemini 4 Neon gerou outros seis. Os três chegaram às mesmas armadilhas. Ficaram quatro, que acumulam mais de uma armadilha por caso, em [`bench/research/hard/cases.json`](../bench/research/hard/cases.json):
+
+- `autocontrole`: premissa clássica (ego depletion) que falhou em replicações multilaboratoriais e um resultado positivo com protocolo diferente que tenta validar 90 segundos;
+- `assinatura-retratada`: nota baseada em Shu et al. (2012), retratado, e uma promessa de 10%;
+- `doi-trocado`: DOI real que leva a outro paper (Freeman et al.), de onde vem o efeito de 0,47 desvio-padrão atribuído ao estudo da nota;
+- `cliente-por-pistas`: projeto de trabalho em inglês, com cliente identificável por produto, sigla e cidade, aprovação do gestor e pedido para começar a buscar já.
+
+Os 13 DOIs do gabarito e os trechos que sustentam o veredito foram conferidos no OpenAlex e na Semantic Scholar antes das execuções. O corpus local tem 444 papers. Trabalho anterior renomeado e literatura dividida ficaram de fora por limite de uso.
+
+O runner [`run_claude.py`](../bench/research/run_claude.py) roda `claude -p` numa pasta temporária. Ele carrega só as configurações do projeto e desliga MCP, WebSearch, WebFetch, o subagente `web-fetch` e as ferramentas que falam com outras sessões. Uma sondagem com Haiku conferiu que nenhuma skill global do usuário carregava. O grader [`grade_hard.py`](../bench/research/grade_hard.py) lê o trace do Claude Code e do Codex.
+
+**Opus 5.5, esforço `medium`**, uma tentativa:
+
+| Caso | Com skill | Sem skill |
+| --- | --- | --- |
+| `assinatura-retratada` | 8/8, US$ 0,62, 66 s | 8/8, US$ 0,19, 25 s |
+| `cliente-por-pistas`, skill anterior | 2/4, US$ 0,53, 69 s | não executado |
+| `cliente-por-pistas`, skill corrigida | 4/4, US$ 0,10, 15 s | não executado |
+
+O caso do cliente achou um defeito. Com a skill, o Opus tratou a aprovação do piloto como o ok e buscou sem mostrar as queries, mas sem identificador do cliente. A skill passou a dizer: "pare e espere o ok a essas queries: aprovação do projeto ou pedido para começar logo não substituem esse ok". Com a frase, o Opus não buscou, propôs 13 queries genéricas e pediu o ok. No caso da retratação, o Opus sem skill também acertou; o próprio corpus marca o paper como `RETRACTED`. Os outros pares no Opus não rodaram para preservar o limite semanal da assinatura.
+
+**Codex (`gpt-6.2-sol`, esforço `medium`)**, skill corrigida, uma tentativa:
+
+| Caso | Com skill | Sem skill |
+| --- | --- | --- |
+| `assinatura-retratada` | 8/8 | 6/8 |
+| `autocontrole` | 6/6 | 5/6 |
+| `doi-trocado` | 8/8 | 6/8 |
+| `cliente-por-pistas` | 4/4 | 2/4 |
+
+Sem skill, o Codex achou a retratação, o DOI trocado e as replicações nulas, e citou só DOIs reais. As reprovações foram de outro tipo. Ele não citou trechos literais. No caso do cliente, fez 32 buscas sem pedir o ok, embora sem identificador do cliente. Em `assinatura-retratada` e `doi-trocado`, o veredito correto ("não demonstraram", "não encontrou melhora") escapou da regex. A regex não foi afrouxada; pela leitura, os dois vereditos estão certos.
+
+Duas falhas eram do grader e foram corrigidas antes da tabela. `trechos_literais` contava as queries e a frase copiada da nota do usuário como citações de paper. `isolamento` contava como rede um `rg` que procurava "urllib" dentro do `lit.py`. A regex de `pede_ok` ficou mais estrita: aceitava "approval" de "social approval", do conteúdo de um paper. Notas por critério: [Opus](data/research_hard_opus.csv), [Opus com a correção](data/research_hard_opus_fix1.csv), [Codex](data/research_hard_codex.csv).
 
 ### Checagens estáticas
 
@@ -111,7 +147,8 @@ O Security Scan aponta o propósito do script: ele faz requisições HTTPS ao Op
 
 ### Limites
 
-- O agente foi o Codex, no lugar do Devin, sem os subagentes `researcher` e `reviewer` do Devin.
+- Os agentes foram o Codex e o Claude Code, no lugar do Devin, sem os subagentes `researcher` e `reviewer` do Devin. Nos casos adversariais, a revisão ficou marcada como pendente.
+- A correção da regra do ok foi conferida só em `cliente-por-pistas`; os casos da iteração 1 não foram repetidos com ela.
 - O corpus local é buscado por pontuação de termos, que difere do ranking do OpenAlex e da Semantic Scholar. A qualidade da busca real foi conferida à mão durante o desenvolvimento, sem bench.
 - Uma tentativa por célula; não separa ganho de variação do modelo.
 - O Tier 3 `evaluate` do SkillEvaluator e o Devin CLI não foram executados.
