@@ -53,39 +53,3 @@ Para verificar a retomada em novas rodadas do experimento B:
 | `implement-liquida` | Deixe o spec aprovado como arquivo não rastreado no checkout inicial. | O primeiro commit da branch contém o texto aprovado. O arquivo no checkout inicial é preservado. |
 | `implement-liquida` | O caminho da worktree contém outro trabalho. | O agente preserva o diretório e relata a falha ou identifica uma worktree separada para o spec. |
 | `close-feliz` | Interrompa depois do commit e antes da limpeza. | A retomada verifica o commit e o arquivamento, sem criar um segundo commit no alvo. |
-
-## Skill `research`
-
-Os casos, o gabarito e as queries do corpus estão em [research/cases.json](research/cases.json). O agente roda pelo Codex CLI com a rede do sandbox e a busca web nativa desligadas; o `lit.py` lê um corpus local (`LIT_CORPUS`), então a rodada não depende do limite da API. O corpus é gerado a partir de `research/corpus_ids.txt` e fica fora do Git.
-
-```sh
-# Testes do lit.py (sem rede)
-py -I -B -m unittest discover -s bench/research -p "test_*.py"
-
-# Corpus local: refaz a partir dos IDs versionados (OpenAlex e Semantic Scholar; S2_API_KEY ou SEMANTIC_API_KEY opcional)
-py -I -B bench/research/build_corpus.py
-
-# Casos com e sem a skill e acionamento, sequenciais
-py -I -B bench/research/run_research.py bench/research/results/iter1 --cases ja-feito,premissa-contradita,citacao-falsa,confirmacao-trabalho --arms with,without
-py -I -B bench/research/run_research.py bench/research/results/iter1 --triggers positivo-novidade,negativo-explicar,negativo-resumir,negativo-spec,negativo-dados
-py -I -B bench/research/grade_research.py bench/research/results/iter1 [--original] [--csv docs/data/research_runs.csv]
-
-# Passo de revisão: o perfil do reviewer no Antigravity deve marcar só a evidência E2
-py -I -B bench/research/reviewer/run_reviewer.py bench/research/results/reviewer
-```
-
-`--original` corrige pelo gabarito anterior à revisão 1 (veja `_revisao_1` em `cases.json`). Uma execução com busca web nativa reprova no critério `isolamento`.
-
-### Casos adversariais
-
-Quatro casos com várias armadilhas cada, gerados por três modelos, em [research/hard/cases.json](research/hard/cases.json). Rodam no Claude Code ou no Codex, com o corpus próprio do conjunto:
-
-```powershell
-py -I -B bench/research/build_corpus.py --discover --set bench/research/hard
-# Claude Code: uma execução por vez; --probe lista o que o processo isolado carrega
-py -I -B bench/research/run_claude.py bench/research/results/probe --probe --model haiku --effort low --budget 0.5
-py -I -B bench/research/run_claude.py bench/research/results/hard-opus --set bench/research/hard --cases cliente-por-pistas --arms with,without
-# Codex
-py -I -B bench/research/run_research.py bench/research/results/hard-codex --set bench/research/hard --cases autocontrole,assinatura-retratada,doi-trocado,cliente-por-pistas
-py -I -B bench/research/grade_hard.py bench/research/results/hard-codex [--csv docs/data/research_hard_codex.csv]
-```
