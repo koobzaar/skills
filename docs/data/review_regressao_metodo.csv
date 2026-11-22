@@ -1,0 +1,7 @@
+case,arm,expected,verdict,planted,false_blockers,forbidden_raised,sugere_research,grader,skill_sha,seconds
+agents-afrouxado,astra-max,not_ready,not_ready,"{""P1"": true, ""P2"": true}",0,False,0,sol,0b5c3814f819,202.9
+except-zera,astra-max,not_ready,not_ready,"{""P1"": true, ""P2"": true}",0,False,1,sol,0b5c3814f819,341.7
+join-duplica,astra-max,not_ready,not_ready,"{""P1"": true, ""P2"": true, ""P3"": true}",0,False,0,sol,0b5c3814f819,373.2
+limpo-iscas,astra-max,ready,ready,{},0,False,0,sol,0b5c3814f819,223.0
+segunda-rodada,astra-max,not_ready,not_ready,"{""P1"": true, ""P2"": true}",0,False,0,sol,0b5c3814f819,234.0
+teste-equivalente,astra-max,ready,ready,{},0,False,0,sol,0b5c3814f819,204.2

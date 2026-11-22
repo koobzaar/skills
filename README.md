@@ -20,7 +20,7 @@ flowchart LR
 
 | Comando | Entrega |
 | --- | --- |
-| [`/research`](skills/research/SKILL.md) | Relatório em `research/` que confere a ideia na literatura: se já foi feita e se as premissas se sustentam, cada evidência com o paper e o trecho literal. Roda antes do `/spec`. |
+| [`/research`](skills/research/SKILL.md) | Relatório em `research/` que confere na literatura se cada escolha de método é a mais adequada ao problema, se a ideia já foi feita e se as premissas se sustentam, cada evidência com o paper e o trecho literal. Roda no brainstorm, antes do `/spec`; `implement` e `review` sugerem a skill quando aparece uma escolha estatística duvidosa. |
 | [`/spec`](skills/spec/SKILL.md) | Spec em `specs/` com risco, critérios verificáveis e passos. |
 | [`/implement`](skills/implement/SKILL.md) | Mudança em worktree, commits com `Validado:`, resultados de aceite e referências julgadas. |
 | [`/review`](skills/review/SKILL.md) | Parecer sobre o spec ou veredito sobre o diff, com evidências e SHAs. |

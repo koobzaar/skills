@@ -1,0 +1,15 @@
+case,arm,attempt,criterion,pass,detail,model,effort,skill_sha,seconds,input_tokens,output_tokens,exit
+negativo-dados,with,1,acionamento,1,leu o SKILL.md: False; esperado: False,gpt-6.2-sol,medium,d95e74f26091,27.5,82360,899,0
+negativo-dados,with,1,isolamento,1,0 buscas web nativas,gpt-6.2-sol,medium,d95e74f26091,27.5,82360,899,0
+negativo-explicar,with,1,acionamento,1,leu o SKILL.md: False; esperado: False,gpt-6.2-sol,medium,d95e74f26091,7.4,15699,112,0
+negativo-explicar,with,1,isolamento,1,0 buscas web nativas,gpt-6.2-sol,medium,d95e74f26091,7.4,15699,112,0
+negativo-implementar-metrica,with,1,acionamento,1,leu o SKILL.md: False; esperado: False,gpt-6.2-sol,medium,d95e74f26091,44.0,150277,1202,0
+negativo-implementar-metrica,with,1,isolamento,1,0 buscas web nativas,gpt-6.2-sol,medium,d95e74f26091,44.0,150277,1202,0
+negativo-resumir,with,1,acionamento,1,leu o SKILL.md: False; esperado: False,gpt-6.2-sol,medium,d95e74f26091,9.6,37417,154,0
+negativo-resumir,with,1,isolamento,1,0 buscas web nativas,gpt-6.2-sol,medium,d95e74f26091,9.6,37417,154,0
+negativo-spec,with,1,acionamento,1,leu o SKILL.md: False; esperado: False,gpt-6.2-sol,medium,d95e74f26091,49.1,119157,1775,0
+negativo-spec,with,1,isolamento,1,0 buscas web nativas,gpt-6.2-sol,medium,d95e74f26091,49.1,119157,1775,0
+positivo-metodo,with,1,acionamento,1,leu o SKILL.md: True; esperado: True,gpt-6.2-sol,medium,d95e74f26091,306.4,1235765,5405,0
+positivo-metodo,with,1,isolamento,1,0 buscas web nativas,gpt-6.2-sol,medium,d95e74f26091,306.4,1235765,5405,0
+positivo-novidade,with,1,acionamento,1,leu o SKILL.md: True; esperado: True,gpt-6.2-sol,medium,d95e74f26091,96.0,637407,3296,0
+positivo-novidade,with,1,isolamento,1,0 buscas web nativas,gpt-6.2-sol,medium,d95e74f26091,96.0,637407,3296,0

@@ -133,6 +133,44 @@ Sem skill, o Codex achou a retratação, o DOI trocado e as replicações nulas,
 
 Duas falhas eram do grader e foram corrigidas antes da tabela. `trechos_literais` contava as queries e a frase copiada da nota do usuário como citações de paper. `isolamento` contava como rede um `rg` que procurava "urllib" dentro do `lit.py`. A regex de `pede_ok` ficou mais estrita: aceitava "approval" de "social approval", do conteúdo de um paper. Notas por critério: [Opus](data/research_hard_opus.csv), [Opus com a correção](data/research_hard_opus_fix1.csv), [Codex](data/research_hard_codex.csv).
 
+### Pergunta de método
+
+A skill passou a responder também "este é o método mais adequado, estatística e matematicamente, para o problema?". As escolhas de método, lidas na ideia, no plano ou no código, viram afirmações com dois vereditos novos: `adequado` e `há alternativa melhor`. `implement` e `review` ganharam uma linha cada para sugerir `/research` quando aparece uma escolha estatística duvidosa.
+
+Os três casos em [`bench/research/metodo/cases.json`](../bench/research/metodo/cases.json) foram escritos pelo Claude a partir de armadilhas documentadas. Os 9 DOIs do gabarito foram conferidos antes das execuções.
+
+- `modelo-demanda`: plano com regressão em log e volta com exp, KFold aleatório numa série diária e MAPE com dias de venda zero.
+- `script-fraude`: script com SMOTE antes da divisão, seleção de variáveis com todos os dados e acurácia e ROC para 1% de fraudes.
+- `escolha-adequada`: controle com Benjamini-Hochberg, que não deve ser contestado.
+
+Os dois papers de Bergmeir sobre validação em séries temporais não têm resumo nem trecho no corpus. Por isso a evidência de validação aceita também a taxonomia de vazamento de Kapoor e Narayanan.
+
+Codex (`gpt-6.2-sol`, `medium`), uma tentativa:
+
+| Caso | Com skill | Sem skill |
+| --- | --- | --- |
+| `modelo-demanda` | 11/11 | 10/11 |
+| `script-fraude` | 9/11 | 9/11 |
+| `escolha-adequada` | 6/7 | 6/7 |
+
+Nos dois braços, o agente apontou a maior parte das armadilhas. Sem skill, faltou a evidência da validação temporal em `modelo-demanda`. Em `script-fraude`, faltou Ambroise e McLachlan sobre o viés de seleção, e em `escolha-adequada`, os trechos literais. Nenhum braço contestou o Benjamini-Hochberg.
+
+As reprovações com skill pedem leitura:
+
+- `smote_antes_do_split`: o regex não reconheceu "antes da divisão" nem "overly-optimistic". O relatório marca a escolha como `há alternativa melhor` e cita Santos et al. (2018): "A frequent experimental flaw is the application of oversampling algorithms to the entire dataset".
+- `sem_doi_inventado`, nos dois casos: são DOIs lembrados (por exemplo, Holm, 1979) que o agente tentou resolver com `get`. Ele registrou cada um como não localizado e fora das evidências.
+
+Pela leitura, nenhum desses DOIs serviu de evidência. Os critérios não foram afrouxados.
+
+Regressões:
+
+- Casos da iteração 1, com a skill nova e só no braço com skill: 4/4, inclusive `confirmacao-trabalho`.
+- Acionamento: com a primeira descrição ("Use ao planejar um modelo ou análise..."), o Codex leu a skill em `negativo-spec` e `negativo-dados`, sem buscar. A descrição foi estreitada ("Use quando essa dúvida surgir, não para calcular, escrever código ou spec"). Com ela, os sete casos passaram, inclusive os novos `positivo-metodo` e `negativo-implementar-metrica`. Os casos de método e a regressão rodaram antes da troca da descrição, que não muda o corpo da skill.
+- `review`: as seis fixtures do experimento A no braço `astra-max`, corrigidas pelo juiz `sol`. Os vereditos esperados e todos os problemas plantados foram mantidos, sem bloqueio falso. A linha nova apareceu só em `except-zera`, como sugestão de `/research` sobre o viés de imputar zero, fora dos achados.
+- `implement`: o experimento B roda só no Claude Code e não foi executado, para preservar o limite semanal.
+
+Notas por critério: [método](data/research_metodo_codex.csv), [regressão](data/research_metodo_regressao.csv), [acionamento](data/research_metodo_triggers2.csv), [review](data/review_regressao_metodo.csv).
+
 ### Checagens estáticas
 
 | Checagem | Resultado |
