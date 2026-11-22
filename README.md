@@ -20,13 +20,12 @@ flowchart LR
 
 | Comando | Entrega |
 | --- | --- |
-| [`/research`](skills/research/SKILL.md) | Relatório em `research/` que confere a ideia na literatura: se já foi feita e se as premissas se sustentam, cada evidência com o paper e o trecho literal. Roda antes do `/spec`. |
 | [`/spec`](skills/spec/SKILL.md) | Spec em `specs/` com risco, critérios verificáveis e passos. |
 | [`/implement`](skills/implement/SKILL.md) | Mudança em worktree, commits com `Validado:`, resultados de aceite e referências julgadas. |
 | [`/review`](skills/review/SKILL.md) | Parecer sobre o spec ou veredito sobre o diff, com evidências e SHAs. |
 | [`/close-spec`](skills/close-spec/SKILL.md) | Squash local do commit revisado, spec arquivado e pendências registradas. O push fica a cargo do usuário. |
 
-Uso o `explorer` quando preciso levantar algo no código ou nos dados antes de decidir. O `researcher` faz as buscas de literatura do `/research`. O `reviewer` só lê. O perfil dele aponta para GPT-6.2 Astra, da OpenAI. [Explorer](agents/explorer.md) · [Researcher](agents/researcher.md) · [Reviewer](agents/reviewer.md)
+Uso o `explorer` quando preciso levantar algo no código ou nos dados antes de decidir. O `reviewer` só lê. O perfil dele aponta para GPT-6.2 Astra, da OpenAI. [Explorer](agents/explorer.md) · [Reviewer](agents/reviewer.md)
 
 ## Instalação
 
@@ -49,16 +48,6 @@ Copy-Item ../skills/agents/*.md .devin/agents/
 ```
 
 Para instalar globalmente, use `~/.config/devin/` ou `%APPDATA%\devin\` no Windows. Confira o identificador do modelo com `devin models list --format json`. Se alterar o modelo, atualize o campo `model:` e o nome no corpo do perfil instalado. [Skills no Devin CLI](https://docs.devin.ai/cli/extensibility/skills/creating-skills) · [Perfil do revisor](agents/reviewer.md)
-
-### Busca de literatura
-
-O `/research` usa o `lit.py`, que vai junto na pasta da skill e só precisa de Python 3.11+. Ele consulta o OpenAlex e o Crossref sem chave. Com a chave da Semantic Scholar no ambiente, também usa a busca e os trechos do corpo dos papers. Defina `SEMANTIC_API_KEY` ou `S2_API_KEY` como variável de ambiente, em cada máquina onde a skill roda, e não coloque a chave em arquivos do projeto.
-
-```powershell
-setx SEMANTIC_API_KEY "<sua chave>"   # abre um terminal novo depois
-```
-
-As queries saem para esses serviços. Em projeto de trabalho, a skill mostra as queries e espera o ok antes de buscar, sem nome de cliente ou dado interno. [Decisões da busca](docs/decisoes.md#pesquisa-em-literatura-research)
 
 ## Benchmarks
 
